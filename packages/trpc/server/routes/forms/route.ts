@@ -109,12 +109,18 @@ async function assertOwnership(formId: string, userId: string) {
   const [form] = await db
     .select()
     .from(formsTable)
-    .where(and(eq(formsTable.id, formId), eq(formsTable.creatorId, userId)))
+    .where(eq(formsTable.id, formId))
     .limit(1);
   if (!form) {
     throw new TRPCError({
       code: "NOT_FOUND",
-      message: "Form not found or you do not own it",
+      message: "Form not found",
+    });
+  }
+  if (form.creatorId !== userId) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "You do not have access to this form",
     });
   }
   return form;
@@ -418,7 +424,7 @@ export const formsRouter = router({
         .insert(formsTable)
         .values({
           creatorId: ctx.user.id,
-          title: `${original.title} (Copy)`,
+          title: original.title,
           description: original.description,
           slug,
           status: "draft",

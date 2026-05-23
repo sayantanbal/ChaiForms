@@ -55,11 +55,21 @@ app.get("/openapi.json", (_req, res) => {
   return res.json(openApiDocument);
 });
 
+import rateLimit from "express-rate-limit";
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // Limit each IP to 100 requests per `window` (here, per 1 minute)
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 logger.debug(`docs: ${env.BASE_URL}/docs`);
-app.use("/docs", apiReference({ url: "/openapi.json" }));
+app.use("/docs", apiLimiter, apiReference({ url: "/openapi.json" }));
 
 app.use(
   "/api",
+  apiLimiter,
   createOpenApiExpressMiddleware({
     router: serverRouter,
     createContext,

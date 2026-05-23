@@ -7,6 +7,10 @@ import type { FieldSchemaUnion } from "@repo/schemas";
 
 import { protectedProcedure, router } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
+import {
+  computeCompletionRate,
+  computeAvgDuration,
+} from "../../utils/analytics";
 
 const TAGS = ["Analytics"];
 const getPath = generatePath("/analytics");
@@ -50,23 +54,14 @@ export const analyticsRouter = router({
         .where(eq(responsesTable.formId, input.formId));
 
       const totalResponses = responses.length;
-      const submitted = responses.filter((r) => r.submittedAt !== null);
-      const completionRate =
-        totalResponses === 0
-          ? 0
-          : Math.round((submitted.length / totalResponses) * 100 * 100) / 100;
+      const completionRate = computeCompletionRate(responses);
+      const avgDurationSeconds = computeAvgDuration(responses);
 
-      let avgDurationSeconds: number | null = null;
-      if (submitted.length > 0) {
-        const totalSeconds = submitted.reduce((sum, r) => {
-          const duration =
-            (r.submittedAt!.getTime() - r.startedAt.getTime()) / 1000;
-          return sum + duration;
-        }, 0);
-        avgDurationSeconds = Math.round(totalSeconds / submitted.length);
-      }
-
-      return { totalResponses, completionRate, avgDurationSeconds };
+      return {
+        totalResponses,
+        completionRate,
+        avgDurationSeconds,
+      };
     }),
 
   // -------------------------------------------------------------------------

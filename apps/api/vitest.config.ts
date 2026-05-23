@@ -2,12 +2,12 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    include: ["server/**/*.test.ts"],
-    fileParallelism: false,
     env: {
-      JWT_SECRET: "this-is-a-super-secret-jwt-key-for-testing-123",
       NODE_ENV: "test",
       CSRF_SECRET: "c".repeat(32),
+      JWT_SECRET: "j".repeat(32),
+      BASE_URL: "http://localhost:3000",
+      DATABASE_URL: "postgres://test:test@localhost:5432/test",
     },
   },
 });

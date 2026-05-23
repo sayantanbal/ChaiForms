@@ -114,77 +114,77 @@ All P0 phases → Phase 21 (Deployed demo)
 
 ### Phase 4: tRPC Routers — Backend Business Logic (P0 core; P1/P2 procedures noted in subtasks)
 
-- [ ] 4. Implement `forms` tRPC router
-  - [ ] 4.1 Create `packages/trpc/server/routes/forms/route.ts` — scaffold router with all procedure stubs and `.meta({ openapi: ... })` annotations (tags: `Forms`, `Fields`, `Sharing`, `Templates`)
-  - [ ] 4.2 Implement `forms.create` — insert `formsTable` row with `status = draft`, `visibility = unlisted`, auto-generated unique slug (nanoid or uuid-derived), `creatorId = ctx.user.id`; return `formOutputSchema`
-  - [ ] 4.3 Implement `forms.list` — query all forms where `creatorId = ctx.user.id`, order by `updatedAt` desc, paginate; return `paginatedFormsSchema`
-  - [ ] 4.4 Implement `forms.getById` — query by `id` and `creatorId`; throw `NOT_FOUND` if missing; return form
-  - [ ] 4.5 Implement `forms.getBySlug` — public procedure; query by `slug`; throw `NOT_FOUND` if missing; return `publicFormOutputSchema` (omit `accessPasswordHash`, include `hasPassword` boolean)
-  - [ ] 4.6 Implement `forms.update` — validate ownership (throw `FORBIDDEN`); validate slug pattern if provided (throw `BAD_REQUEST`); check slug uniqueness (throw `CONFLICT`); hash `accessPassword` with bcrypt if provided; update only provided fields; return updated form
-  - [ ] 4.7 Implement `forms.publish` — set `status = published`; return updated form
-  - [ ] 4.8 Implement `forms.unpublish` — set `status = draft`; return updated form
-  - [ ] 4.9 Implement `forms.delete` — validate ownership; set `status = archived`; return `{ success: true }`
-  - [ ] 4.10 Implement `forms.clone` — validate ownership; deep-copy fields, theme, settings; generate new unique slug; set `status = draft`; insert new form row; return new form
-  - [ ] 4.11 Implement `forms.fieldsUpsert` — validate ownership; validate `FieldSchemaUnion[]` array (unique ids, valid types, options/maxRating constraints); validate `conditionalRules` sourceFieldIds reference earlier fields in same form (throw `BAD_REQUEST` if not); atomically update `fields` JSONB and upsert `pagesTable` rows; return updated form
-  - [ ] 4.12 Implement `forms.unlock` — public procedure; load form by slug; `bcrypt.compare(password, accessPasswordHash)`; on match sign short-lived JWT `{ formId, purpose: "unlock" }` (1h expiry); return `{ unlockToken }`; on mismatch throw `UNAUTHORIZED`
-  - [ ] 4.13 Implement `forms.createFromTemplate` — load template by id (throw `NOT_FOUND`); create new form with template's fields, theme, title; `status = draft`; return new form
-  - [ ] 4.14 Write unit tests in `packages/trpc/server/__tests__/forms.test.ts` — create defaults, update ownership check, slug validation, slug conflict, clone independence, publish/unpublish lifecycle, fieldsUpsert validation, unlock correct/incorrect password
-  - [ ] 4.15 Write property-based test `packages/trpc/server/__tests__/forms-create.property.test.ts` — **Property 2: Form creation defaults invariant** — for any valid title, created form has `status = draft`, `visibility = unlisted`, `creatorId` matches authenticated user
-  - [ ] 4.16 Write property-based test `packages/trpc/server/__tests__/forms-update.property.test.ts` — **Property 3: Partial update preserves unmodified fields** — for any existing form and any subset of updatable fields, unmodified fields retain previous values
-  - [ ] 4.17 Write property-based test `packages/trpc/server/__tests__/forms-ownership.property.test.ts` — **Property 4: Ownership enforcement on mutations** — any mutation by a different user returns `FORBIDDEN` and does not modify the form
-  - [ ] 4.18 Write property-based test `packages/trpc/server/__tests__/forms-clone.property.test.ts` — **Property 5: Form clone produces independent copy** — clone has same fields/theme/title, distinct id and slug, `status = draft`; mutations to clone do not affect original
-  - [ ] 4.19 Write property-based test `packages/trpc/server/__tests__/slug-uniqueness.property.test.ts` — **Property 6: Slug uniqueness invariant** — no two forms share the same slug after any sequence of create/update calls
-  - [ ] 4.20 Write property-based test `packages/trpc/server/__tests__/slug-validation.property.test.ts` — **Property 7: Slug validation pattern** — `forms.update` succeeds iff slug matches `^[a-z0-9-]{3,60}$`; all non-matching strings return `BAD_REQUEST`
-  - [ ] 4.21 Write property-based test `packages/trpc/server/__tests__/password-hash.property.test.ts` — **Property 17: Password hash never stores plaintext** — stored `accessPasswordHash` never equals the plaintext; `bcrypt.compare(plaintext, hash)` returns true
-  - [ ] 4.22 Write property-based test `packages/trpc/server/__tests__/unlock-token.property.test.ts` — **Property 18: Unlock token correctness** — correct password returns valid token; any other string returns `UNAUTHORIZED`; valid token allows submit; absent/invalid token returns `FORBIDDEN`
+- [x] 4. Implement `forms` tRPC router
+  - [x] 4.1 Create `packages/trpc/server/routes/forms/route.ts` — scaffold router with all procedure stubs and `.meta({ openapi: ... })` annotations (tags: `Forms`, `Fields`, `Sharing`, `Templates`)
+  - [x] 4.2 Implement `forms.create` — insert `formsTable` row with `status = draft`, `visibility = unlisted`, auto-generated unique slug (nanoid or uuid-derived), `creatorId = ctx.user.id`; return `formOutputSchema`
+  - [x] 4.3 Implement `forms.list` — query all forms where `creatorId = ctx.user.id`, order by `updatedAt` desc, paginate; return `paginatedFormsSchema`
+  - [x] 4.4 Implement `forms.getById` — query by `id` and `creatorId`; throw `NOT_FOUND` if missing; return form
+  - [x] 4.5 Implement `forms.getBySlug` — public procedure; query by `slug`; throw `NOT_FOUND` if missing; return `publicFormOutputSchema` (omit `accessPasswordHash`, include `hasPassword` boolean)
+  - [x] 4.6 Implement `forms.update` — validate ownership (throw `FORBIDDEN`); validate slug pattern if provided (throw `BAD_REQUEST`); check slug uniqueness (throw `CONFLICT`); hash `accessPassword` with bcrypt if provided; update only provided fields; return updated form
+  - [x] 4.7 Implement `forms.publish` — set `status = published`; return updated form
+  - [x] 4.8 Implement `forms.unpublish` — set `status = draft`; return updated form
+  - [x] 4.9 Implement `forms.delete` — validate ownership; set `status = archived`; return `{ success: true }`
+  - [x] 4.10 Implement `forms.clone` — validate ownership; deep-copy fields, theme, settings; generate new unique slug; set `status = draft`; insert new form row; return new form
+  - [x] 4.11 Implement `forms.fieldsUpsert` — validate ownership; validate `FieldSchemaUnion[]` array (unique ids, valid types, options/maxRating constraints); validate `conditionalRules` sourceFieldIds reference earlier fields in same form (throw `BAD_REQUEST` if not); atomically update `fields` JSONB and upsert `pagesTable` rows; return updated form
+  - [x] 4.12 Implement `forms.unlock` — public procedure; load form by slug; `bcrypt.compare(password, accessPasswordHash)`; on match sign short-lived JWT `{ formId, purpose: "unlock" }` (1h expiry); return `{ unlockToken }`; on mismatch throw `UNAUTHORIZED`
+  - [x] 4.13 Implement `forms.createFromTemplate` — load template by id (throw `NOT_FOUND`); create new form with template's fields, theme, title; `status = draft`; return new form
+  - [x] 4.14 Write unit tests in `packages/trpc/server/__tests__/forms.test.ts` — create defaults, update ownership check, slug validation, slug conflict, clone independence, publish/unpublish lifecycle, fieldsUpsert validation, unlock correct/incorrect password
+  - [x] 4.15 Write property-based test `packages/trpc/server/__tests__/forms-create.property.test.ts` — **Property 2: Form creation defaults invariant** — for any valid title, created form has `status = draft`, `visibility = unlisted`, `creatorId` matches authenticated user
+  - [x] 4.16 Write property-based test `packages/trpc/server/__tests__/forms-update.property.test.ts` — **Property 3: Partial update preserves unmodified fields** — for any existing form and any subset of updatable fields, unmodified fields retain previous values
+  - [x] 4.17 Write property-based test `packages/trpc/server/__tests__/forms-ownership.property.test.ts` — **Property 4: Ownership enforcement on mutations** — any mutation by a different user returns `FORBIDDEN` and does not modify the form
+  - [x] 4.18 Write property-based test `packages/trpc/server/__tests__/forms-clone.property.test.ts` — **Property 5: Form clone produces independent copy** — clone has same fields/theme/title, distinct id and slug, `status = draft`; mutations to clone do not affect original
+  - [x] 4.19 Write property-based test `packages/trpc/server/__tests__/slug-uniqueness.property.test.ts` — **Property 6: Slug uniqueness invariant** — no two forms share the same slug after any sequence of create/update calls
+  - [x] 4.20 Write property-based test `packages/trpc/server/__tests__/slug-validation.property.test.ts` — **Property 7: Slug validation pattern** — `forms.update` succeeds iff slug matches `^[a-z0-9-]{3,60}$`; all non-matching strings return `BAD_REQUEST`
+  - [x] 4.21 Write property-based test `packages/trpc/server/__tests__/password-hash.property.test.ts` — **Property 17: Password hash never stores plaintext** — stored `accessPasswordHash` never equals the plaintext; `bcrypt.compare(plaintext, hash)` returns true
+  - [x] 4.22 Write property-based test `packages/trpc/server/__tests__/unlock-token.property.test.ts` — **Property 18: Unlock token correctness** — correct password returns valid token; any other string returns `UNAUTHORIZED`; valid token allows submit; absent/invalid token returns `FORBIDDEN`
 
 
-- [ ] 5. Implement `responses` tRPC router
-  - [ ] 5.1 Create `packages/trpc/server/routes/responses/route.ts` — scaffold router with `.meta({ openapi: ... })` annotations (tag: `Responses`)
-  - [ ] 5.1b Create `packages/trpc/server/utils/submit-rate-limit.ts` — `assertSubmitRateLimit(ip)` in-memory 10 req / 60s; throw `TRPCError({ code: "TOO_MANY_REQUESTS" })`
-  - [ ] 5.2 Implement `responses.submit` — public procedure; call `assertSubmitRateLimit(ctx.req.ip)` first; load form by `formId`; check `status = published` (throw `FORBIDDEN` with message if draft/archived); check `expiryDate` (throw `FORBIDDEN` if past); check `responseLimit` (count existing responses, throw `FORBIDDEN` if at limit); if `accessPasswordHash` set, verify `unlockToken` JWT in payload (throw `FORBIDDEN` if missing/invalid); validate each answer against the form's `FieldSchemaUnion` fields (required, minLength, maxLength, regex, number range, date range, email format, `multi_select` JSON array in `options`); insert `responsesTable` row; bulk insert `answersTable` rows; fire-and-forget `NotificationService.sendSubmissionEmails()`; return `{ success: true, responseId }`
-  - [ ] 5.3 Implement `responses.list` — protected procedure; validate form ownership; query `responsesTable` with optional `startDate`/`endDate` filter, paginate; join answers; return `paginatedResponsesSchema`
-  - [ ] 5.4 Implement `responses.exportCsv` — protected procedure; validate form ownership; load all responses + answers; build CSV with header row (field labels) and one row per response; return CSV string
-  - [ ] 5.5 Write unit tests in `packages/trpc/server/__tests__/responses.test.ts` — submit valid response, submit with missing required field, submit to draft form, submit past expiry, submit at response limit, submit without unlock token to password-protected form, list with date filter, CSV export format
-  - [ ] 5.6 Write property-based test `packages/trpc/server/__tests__/responses-required.property.test.ts` — **Property 8: Required field enforcement on submission** — for any form with required fields, submitting with any required field absent returns `BAD_REQUEST` containing all missing field IDs
-  - [ ] 5.7 Write property-based test `packages/trpc/server/__tests__/responses-text-length.property.test.ts` — **Property 9: Text length constraint enforcement** — for any `short_text`/`long_text` field with `minLength`/`maxLength`, answers outside the range return `BAD_REQUEST`
-  - [ ] 5.8 Write property-based test `packages/trpc/server/__tests__/responses-regex.property.test.ts` — **Property 10: Regex validation enforcement** — answers not matching `validationRegex` return `BAD_REQUEST`; matching answers do not
-  - [ ] 5.9 Write property-based test `packages/trpc/server/__tests__/responses-number-range.property.test.ts` — **Property 11: Number range constraint enforcement** — answers outside `[min, max]` return `BAD_REQUEST`; values within range do not
-  - [ ] 5.10 Write property-based test `packages/trpc/server/__tests__/responses-roundtrip.property.test.ts` — **Property 12: Response submission round-trip** — for any valid answer set, submitted answers are retrievable via `responses.list` with matching `fieldId`/`value` pairs
-  - [ ] 5.11 Write property-based test `packages/trpc/server/__tests__/responses-expiry.property.test.ts` — **Property 13: Expired form rejects submissions** — any form with `expiryDate` in the past returns `FORBIDDEN` and persists no rows
-  - [ ] 5.12 Write property-based test `packages/trpc/server/__tests__/responses-limit.property.test.ts` — **Property 14: Response limit enforcement** — after exactly N responses, the (N+1)th call returns `FORBIDDEN` and persists no additional rows
+- [x] 5. Implement `responses` tRPC router
+  - [x] 5.1 Create `packages/trpc/server/routes/responses/route.ts` — scaffold router with `.meta({ openapi: ... })` annotations (tag: `Responses`)
+  - [x] 5.1b Create `packages/trpc/server/utils/submit-rate-limit.ts` — `assertSubmitRateLimit(ip)` in-memory 10 req / 60s; throw `TRPCError({ code: "TOO_MANY_REQUESTS" })`
+  - [x] 5.2 Implement `responses.submit` — public procedure; call `assertSubmitRateLimit(ctx.req.ip)` first; load form by `formId`; check `status = published` (throw `FORBIDDEN` with message if draft/archived); check `expiryDate` (throw `FORBIDDEN` if past); check `responseLimit` (count existing responses, throw `FORBIDDEN` if at limit); if `accessPasswordHash` set, verify `unlockToken` JWT in payload (throw `FORBIDDEN` if missing/invalid); validate each answer against the form's `FieldSchemaUnion` fields (required, minLength, maxLength, regex, number range, date range, email format, `multi_select` JSON array in `options`); insert `responsesTable` row; bulk insert `answersTable` rows; fire-and-forget `NotificationService.sendSubmissionEmails()`; return `{ success: true, responseId }`
+  - [x] 5.3 Implement `responses.list` — protected procedure; validate form ownership; query `responsesTable` with optional `startDate`/`endDate` filter, paginate; join answers; return `paginatedResponsesSchema`
+  - [x] 5.4 Implement `responses.exportCsv` — protected procedure; validate form ownership; load all responses + answers; build CSV with header row (field labels) and one row per response; return CSV string
+  - [x] 5.5 Write unit tests in `packages/trpc/server/__tests__/responses.test.ts` — submit valid response, submit with missing required field, submit to draft form, submit past expiry, submit at response limit, submit without unlock token to password-protected form, list with date filter, CSV export format
+  - [x] 5.6 Write property-based test `packages/trpc/server/__tests__/responses-required.property.test.ts` — **Property 8: Required field enforcement on submission** — for any form with required fields, submitting with any required field absent returns `BAD_REQUEST` containing all missing field IDs
+  - [x] 5.7 Write property-based test `packages/trpc/server/__tests__/responses-text-length.property.test.ts` — **Property 9: Text length constraint enforcement** — for any `short_text`/`long_text` field with `minLength`/`maxLength`, answers outside the range return `BAD_REQUEST`
+  - [x] 5.8 Write property-based test `packages/trpc/server/__tests__/responses-regex.property.test.ts` — **Property 10: Regex validation enforcement** — answers not matching `validationRegex` return `BAD_REQUEST`; matching answers do not
+  - [x] 5.9 Write property-based test `packages/trpc/server/__tests__/responses-number-range.property.test.ts` — **Property 11: Number range constraint enforcement** — answers outside `[min, max]` return `BAD_REQUEST`; values within range do not
+  - [x] 5.10 Write property-based test `packages/trpc/server/__tests__/responses-roundtrip.property.test.ts` — **Property 12: Response submission round-trip** — for any valid answer set, submitted answers are retrievable via `responses.list` with matching `fieldId`/`value` pairs
+  - [x] 5.11 Write property-based test `packages/trpc/server/__tests__/responses-expiry.property.test.ts` — **Property 13: Expired form rejects submissions** — any form with `expiryDate` in the past returns `FORBIDDEN` and persists no rows
+  - [x] 5.12 Write property-based test `packages/trpc/server/__tests__/responses-limit.property.test.ts` — **Property 14: Response limit enforcement** — after exactly N responses, the (N+1)th call returns `FORBIDDEN` and persists no additional rows
 
 
-- [ ] 6. Implement `analytics` tRPC router
-  - [ ] 6.1 Create `packages/trpc/server/routes/analytics/route.ts` — scaffold router with `.meta({ openapi: ... })` annotations (tag: `Analytics`)
-  - [ ] 6.2 Create `packages/trpc/server/utils/analytics.ts` — implement `computeCompletionRate(responses)` and `computeAvgDuration(responses)` pure utility functions used by the handler and property tests
-  - [ ] 6.3 Implement `analytics.getSummary` — validate form ownership (throw `FORBIDDEN`); run SQL aggregation for `totalResponses`, `completionRate`, `avgDurationSeconds`; return `analyticsSummarySchema`
-  - [ ] 6.4 Implement `analytics.getFieldBreakdown` — validate form ownership; run `GROUP BY field_id, value` query on `answersTable`; join with form's `fields` JSONB to attach `fieldLabel`; return `fieldBreakdownItemSchema[]`
-  - [ ] 6.5 Implement `analytics.getResponsesOverTime` — validate form ownership; run `DATE_TRUNC(granularity, submitted_at)` aggregation; return `{ date, count }[]`
-  - [ ] 6.6 Write unit tests in `packages/trpc/server/__tests__/analytics.test.ts` — summary with known response set, field breakdown distribution, ownership check, responses-over-time with day/week/month granularity
-  - [ ] 6.7 Write property-based test `packages/trpc/server/__tests__/analytics-completion.property.test.ts` — **Property 15: Analytics completion rate correctness** — `completionRate = (submittedCount / totalCount) * 100`, `avgDurationSeconds` equals arithmetic mean of durations
-  - [ ] 6.8 Write property-based test `packages/trpc/server/__tests__/analytics-breakdown.property.test.ts` — **Property 16: Field breakdown frequency correctness** — each value's count equals exact occurrences in `answers` table; sum of counts equals total answers for that field
+- [x] 6. Implement `analytics` tRPC router
+  - [x] 6.1 Create `packages/trpc/server/routes/analytics/route.ts` — scaffold router with `.meta({ openapi: ... })` annotations (tag: `Analytics`)
+  - [x] 6.2 Create `packages/trpc/server/utils/analytics.ts` — implement `computeCompletionRate(responses)` and `computeAvgDuration(responses)` pure utility functions used by the handler and property tests
+  - [x] 6.3 Implement `analytics.getSummary` — validate form ownership (throw `FORBIDDEN`); run SQL aggregation for `totalResponses`, `completionRate`, `avgDurationSeconds`; return `analyticsSummarySchema`
+  - [x] 6.4 Implement `analytics.getFieldBreakdown` — validate form ownership; run `GROUP BY field_id, value` query on `answersTable`; join with form's `fields` JSONB to attach `fieldLabel`; return `fieldBreakdownItemSchema[]`
+  - [x] 6.5 Implement `analytics.getResponsesOverTime` — validate form ownership; run `DATE_TRUNC(granularity, submitted_at)` aggregation; return `{ date, count }[]`
+  - [x] 6.6 Write unit tests in `packages/trpc/server/__tests__/analytics.test.ts` — summary with known response set, field breakdown distribution, ownership check, responses-over-time with day/week/month granularity
+  - [x] 6.7 Write property-based test `packages/trpc/server/__tests__/analytics-completion.property.test.ts` — **Property 15: Analytics completion rate correctness** — `completionRate = (submittedCount / totalCount) * 100`, `avgDurationSeconds` equals arithmetic mean of durations
+  - [x] 6.8 Write property-based test `packages/trpc/server/__tests__/analytics-breakdown.property.test.ts` — **Property 16: Field breakdown frequency correctness** — each value's count equals exact occurrences in `answers` table; sum of counts equals total answers for that field
 
-- [ ] 7. Implement `explore` tRPC router
-  - [ ] 7.1 Create `packages/trpc/server/routes/explore/route.ts` — scaffold router with `.meta({ openapi: ... })` annotations (tags: `Explore`, `Templates`)
-  - [ ] 7.2 Implement `explore.listPublicForms` — query forms where `status = published AND visibility = public`, order by `createdAt` desc, paginate; return `paginatedPublicFormsSchema`
-  - [ ] 7.3 Implement `explore.listFeaturedForms` — query up to 6 forms where `status = published AND visibility = public`, order by response count desc; return `publicFormCardSchema[]`
-  - [ ] 7.4 Implement `explore.listTemplates` — query all `templatesTable` rows; return `templateOutputSchema[]`
-  - [ ] 7.5 Write unit tests in `packages/trpc/server/__tests__/explore.test.ts` — listPublicForms excludes draft/archived/unlisted, listFeaturedForms ordered by response count, listTemplates returns all templates
+- [x] 7. Implement `explore` tRPC router
+  - [x] 7.1 Create `packages/trpc/server/routes/explore/route.ts` — scaffold router with `.meta({ openapi: ... })` annotations (tags: `Explore`, `Templates`)
+  - [x] 7.2 Implement `explore.listPublicForms` — query forms where `status = published AND visibility = public`, order by `createdAt` desc, paginate; return `paginatedPublicFormsSchema`
+  - [x] 7.3 Implement `explore.listFeaturedForms` — query up to 6 forms where `status = published AND visibility = public`, order by response count desc; return `publicFormCardSchema[]`
+  - [x] 7.4 Implement `explore.listTemplates` — query all `templatesTable` rows; return `templateOutputSchema[]`
+  - [x] 7.5 Write unit tests in `packages/trpc/server/__tests__/explore.test.ts` — listPublicForms excludes draft/archived/unlisted, listFeaturedForms ordered by response count, listTemplates returns all templates
 
-- [ ] 8. Implement `admin` tRPC router
-  - [ ] 8.1 Create `packages/trpc/server/routes/admin/route.ts` — scaffold router with `.meta({ openapi: ... })` annotations (tag: `Admin`); all procedures use `adminProcedure`
-  - [ ] 8.2 Implement `admin.getStats` — count users, count forms by status, count total responses; return `platformStatsSchema`
-  - [ ] 8.3 Implement `admin.listForms` — paginated query of all forms across all creators, join with user email; return `paginatedAdminFormsSchema`
-  - [ ] 8.4 Implement `admin.listUsers` — paginated query of all users, join with form count; return `paginatedAdminUsersSchema`
-  - [ ] 8.5 Write unit tests in `packages/trpc/server/__tests__/admin.test.ts` — non-admin user returns `FORBIDDEN` on all three procedures, admin user gets correct stats/lists
+- [x] 8. Implement `admin` tRPC router
+  - [x] 8.1 Create `packages/trpc/server/routes/admin/route.ts` — scaffold router with `.meta({ openapi: ... })` annotations (tag: `Admin`); all procedures use `adminProcedure`
+  - [x] 8.2 Implement `admin.getStats` — count users, count forms by status, count total responses; return `platformStatsSchema`
+  - [x] 8.3 Implement `admin.listForms` — paginated query of all forms across all creators, join with user email; return `paginatedAdminFormsSchema`
+  - [x] 8.4 Implement `admin.listUsers` — paginated query of all users, join with form count; return `paginatedAdminUsersSchema`
+  - [x] 8.5 Write unit tests in `packages/trpc/server/__tests__/admin.test.ts` — non-admin user returns `FORBIDDEN` on all three procedures, admin user gets correct stats/lists
 
-- [ ] 9. Wire all routers into `serverRouter` and configure rate limiting
-  - [ ] 9.1 Update `packages/trpc/server/index.ts` — add `formsRouter`, `responsesRouter`, `analyticsRouter`, `exploreRouter`, `adminRouter` to `serverRouter`
-  - [ ] 9.2 Add `express-rate-limit` to `packages/trpc` or `apps/api` only if used for OpenAPI path; primary limit remains `assertSubmitRateLimit` in procedure
-  - [ ] 9.3 Verify rate limit via integration test calling `responses.submit` 11 times — 11th returns `TOO_MANY_REQUESTS` (not Express path middleware on `/trpc`)
-  - [ ] 9.4 Update `apps/api/src/server.ts` — update `generateOpenApiDocument` title to `"ChaiForms API"` and version to `"1.0.0"`; update root `/` and `/health` messages to ChaiForms
-  - [ ] 9.5 Write integration test `apps/api/src/__tests__/rate-limit.test.ts` — 10 submits succeed, 11th returns `TOO_MANY_REQUESTS`
+- [x] 9. Wire all routers into `serverRouter` and configure rate limiting
+  - [x] 9.1 Update `packages/trpc/server/index.ts` — add `formsRouter`, `responsesRouter`, `analyticsRouter`, `exploreRouter`, `adminRouter` to `serverRouter`
+  - [x] 9.2 Add `express-rate-limit` to `packages/trpc` or `apps/api` only if used for OpenAPI path; primary limit remains `assertSubmitRateLimit` in procedure
+  - [x] 9.3 Verify rate limit via integration test calling `responses.submit` 11 times — 11th returns `TOO_MANY_REQUESTS` (not Express path middleware on `/trpc`)
+  - [x] 9.4 Update `apps/api/src/server.ts` — update `generateOpenApiDocument` title to `"ChaiForms API"` and version to `"1.0.0"`; update root `/` and `/health` messages to ChaiForms
+  - [x] 9.5 Write integration test `apps/api/src/__tests__/rate-limit.test.ts` — 10 submits succeed, 11th returns `TOO_MANY_REQUESTS`
 
 
 ---

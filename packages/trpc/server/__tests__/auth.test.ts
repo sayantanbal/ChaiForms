@@ -119,7 +119,7 @@ function createContext(opts?: {
 }) {
   const token = opts?.withCsrf ? createCsrfToken() : null;
   return {
-    user: opts?.user ?? baseUser,
+    user: opts && "user" in opts ? opts.user : baseUser,
     req: {
       headers: token ? { [CSRF_HEADER_NAME]: token } : {},
       cookies: token ? { [CSRF_COOKIE_NAME]: token } : {},
