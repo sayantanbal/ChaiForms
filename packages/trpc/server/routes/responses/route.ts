@@ -1,6 +1,12 @@
 import { TRPCError } from "@trpc/server";
 import { db, eq, and, count, desc, gte, lte } from "@repo/database";
-import { formsTable, responsesTable, answersTable } from "@repo/database/schema";
+import {
+  formsTable,
+  responsesTable,
+  answersTable,
+  usersTable,
+} from "@repo/database/schema";
+import { notificationService } from "@repo/services/notification";
 import { submitResponseSchema, type FieldSchemaUnion } from "@repo/schemas";
 import { z } from "zod";
 
@@ -331,8 +337,28 @@ export const responsesRouter = router({
         );
       }
 
-      // Fire-and-forget email notifications (Phase 5)
-      // void NotificationService.sendSubmissionEmails({ form, responseId: response.id, respondentEmail })
+      const [creator] = await db
+        .select({ email: usersTable.email })
+        .from(usersTable)
+        .where(eq(usersTable.id, form.creatorId))
+        .limit(1);
+
+      if (creator?.email) {
+        const webBaseUrl =
+          process.env.WEB_ORIGIN ??
+          process.env.NEXT_PUBLIC_WEB_BASE_URL ??
+          "http://localhost:3000";
+
+        notificationService.sendSubmissionEmails({
+          creatorEmail: creator.email,
+          formTitle: form.title,
+          formId: form.id,
+          responseId: response.id,
+          respondentEmail: respondentEmail ?? undefined,
+          sendRespondentConfirmation: form.sendRespondentConfirmation,
+          webBaseUrl,
+        });
+      }
 
       return { success: true, responseId: response.id };
     }),

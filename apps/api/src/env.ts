@@ -17,6 +17,7 @@ const envSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
   ENABLE_DEMO_LOGIN: z.enum(["true", "false"]).optional(),
+  RESEND_API_KEY: z.string().min(1).optional(),
 });
 
 function createEnv(env: NodeJS.ProcessEnv) {

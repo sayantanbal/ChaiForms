@@ -31,6 +31,12 @@ vi.mock("../utils/jwt", () => ({
   verifyUnlockToken: vi.fn(() => false),
 }));
 
+vi.mock("@repo/services/notification", () => ({
+  notificationService: {
+    sendSubmissionEmails: vi.fn(),
+  },
+}));
+
 vi.mock("@repo/database", () => ({
   db: {
     select: vi.fn(),
@@ -60,6 +66,10 @@ vi.mock("@repo/database/schema", () => ({
     responseId: "responseId",
     fieldId: "fieldId",
   },
+  usersTable: {
+    id: "id",
+    email: "email",
+  },
 }));
 
 import { responsesRouter } from "../routes/responses/route";
@@ -70,6 +80,7 @@ import {
   createCsrfToken,
 } from "../utils/csrf";
 import { verifyUnlockToken } from "../utils/jwt";
+import { notificationService } from "@repo/services/notification";
 
 const mockDb = db as unknown as {
   select: ReturnType<typeof vi.fn>;
@@ -93,6 +104,9 @@ const originalEnv: Record<string, string | undefined> = {};
 
 const baseForm = {
   id: "e8c95b2b-9848-43d4-8a25-0e4c5fa0a222",
+  creatorId: "a1b2c3d4-e5f6-4789-a012-3456789abcde",
+  title: "Test Form",
+  sendRespondentConfirmation: false,
   status: "published" as const,
   expiryDate: null as Date | null,
   responseLimit: null as number | null,
@@ -200,6 +214,10 @@ describe("responses router", () => {
       result: [{ id: "0d7aa3e1-1c71-4f7a-b909-1f94017f0f11" }],
     });
     insertPlans.push({ type: "valuesOnly" });
+    selectPlans.push({
+      type: "limit",
+      result: [{ email: "creator@example.com" }],
+    });
 
     const ctx = createContext({ method: "POST", withCsrf: true });
     const caller = responsesRouter.createCaller(ctx);
@@ -221,6 +239,12 @@ describe("responses router", () => {
 
     expect(result.success).toBe(true);
     expect(result.responseId).toBe("0d7aa3e1-1c71-4f7a-b909-1f94017f0f11");
+    expect(notificationService.sendSubmissionEmails).toHaveBeenCalledWith(
+      expect.objectContaining({
+        creatorEmail: "creator@example.com",
+        formTitle: "Test Form",
+      }),
+    );
   });
 
   it("rejects missing required fields", async () => {

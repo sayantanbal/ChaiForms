@@ -92,22 +92,22 @@ All P0 phases → Phase 21 (Deployed demo)
 
 ### Phase 3: Auth — JWT, Procedures & Middleware (P0)
 
-- [ ] 3. Implement JWT utilities and auth middleware
-  - [ ] 3.0 Add `cookie-parser` and `@types/cookie-parser` to `apps/api`; call `app.use(cookieParser())` in `apps/api/src/server.ts` before tRPC/OpenAPI adapters
-  - [ ] 3.0b Configure CORS in `apps/api/src/server.ts`: `origin: env.WEB_ORIGIN`, `credentials: true` (replace `origin: "*"` for authenticated flows); add `WEB_ORIGIN` to `apps/api/src/env.ts` and `.env.example`
-  - [ ] 3.0c Configure ChaiForms_Web tRPC client with `credentials: "include"` on fetch/httpBatchLink
-  - [ ] 3.1 Create `packages/trpc/server/utils/jwt.ts` — implement `signJwt(userId: string): string` (HS256, 7d expiry) and `verifyJwt(token: string): { sub: string }` using `jsonwebtoken`; add `JWT_SECRET` env validation
-  - [ ] 3.2 Update `packages/trpc/server/context.ts` — read `session` HTTP-only cookie from `req.cookies`, call `verifyJwt`, query `usersTable` by id, attach `user` (or null) to context; export `Context` type including `req` and `res`
-  - [ ] 3.3 Update `packages/trpc/server/trpc.ts` — add `protectedProcedure` middleware (throws `UNAUTHORIZED` if `ctx.user` is null) and `adminProcedure` middleware (chains after `protectedProcedure`, throws `FORBIDDEN` if `ctx.user.role !== "admin"`); add `errorFormatter` that logs via `@repo/logger`
-  - [ ] 3.4 Extend `packages/trpc/server/routes/auth/route.ts` — implement `callback` public procedure: exchange Google OAuth code for ID token via `GoogleOAuth2Client`, upsert user in `usersTable`, call `signJwt`, set `session` HTTP-only cookie (`sameSite: lax`, `secure` in prod, `maxAge: 7d`), return `{ user }`
-  - [ ] 3.5 Implement `auth.signOut` protected procedure — clear `session` cookie, return `{ success: true }`
-  - [ ] 3.6 Implement `auth.me` protected procedure — return `ctx.user`
-  - [ ] 3.6b Implement `auth.demoLogin` public mutation (P0) — only when `ENABLE_DEMO_LOGIN=true`; input `email` enum `demo@chaiforms.dev` \| `admin@chaiforms.dev`; load seeded user, `signJwt`, set `session` cookie; return `{ user }`; otherwise `NOT_FOUND`; add OpenAPI meta
-  - [ ] 3.6c On OAuth `auth.callback`, if Google email matches `demo@chaiforms.dev` or `admin@chaiforms.dev`, upsert user with that email and preserve/link existing seeded user id so dashboard shows seeded forms
-  - [ ] 3.6d Add `ENABLE_DEMO_LOGIN` to `apps/api/src/env.ts` and `.env.example`; document in README Demo Credentials
-  - [ ] 3.6e Add demo sign-in UI on `/login` when `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true` — buttons "Continue as Demo Creator" / "Continue as Admin" calling `auth.demoLogin`
-  - [ ] 3.7 Write unit tests in `packages/trpc/server/__tests__/auth.test.ts` — callback success, callback with invalid code (400), signOut clears cookie, `protectedProcedure` rejects missing/invalid JWT, `adminProcedure` rejects non-admin role, `demoLogin` gated by env flag
-  - [ ] 3.8 Write property-based test `packages/trpc/server/__tests__/jwt.property.test.ts` — **Property 20: JWT authentication context attachment** — for any valid userId string, `signJwt` then `verifyJwt` round-trip returns the same `sub`; for any tampered token string, `verifyJwt` throws
+- [x] 3. Implement JWT utilities and auth middleware
+  - [x] 3.0 Add `cookie-parser` and `@types/cookie-parser` to `apps/api`; call `app.use(cookieParser())` in `apps/api/src/server.ts` before tRPC/OpenAPI adapters
+  - [x] 3.0b Configure CORS in `apps/api/src/server.ts`: `origin: env.WEB_ORIGIN`, `credentials: true` (replace `origin: "*"` for authenticated flows); add `WEB_ORIGIN` to `apps/api/src/env.ts` and `.env.example`
+  - [x] 3.0c Configure ChaiForms_Web tRPC client with `credentials: "include"` on fetch/httpBatchLink
+  - [x] 3.1 Create `packages/trpc/server/utils/jwt.ts` — implement `signJwt(userId: string): string` (HS256, 7d expiry) and `verifyJwt(token: string): { sub: string }` using `jsonwebtoken`; add `JWT_SECRET` env validation
+  - [x] 3.2 Update `packages/trpc/server/context.ts` — read `session` HTTP-only cookie from `req.cookies`, call `verifyJwt`, query `usersTable` by id, attach `user` (or null) to context; export `Context` type including `req` and `res`
+  - [x] 3.3 Update `packages/trpc/server/trpc.ts` — add `protectedProcedure` middleware (throws `UNAUTHORIZED` if `ctx.user` is null) and `adminProcedure` middleware (chains after `protectedProcedure`, throws `FORBIDDEN` if `ctx.user.role !== "admin"`); add `errorFormatter` that logs via `@repo/logger`
+  - [x] 3.4 Extend `packages/trpc/server/routes/auth/route.ts` — implement `callback` public procedure: exchange Google OAuth code for ID token via `GoogleOAuth2Client`, upsert user in `usersTable`, call `signJwt`, set `session` HTTP-only cookie (`sameSite: lax`, `secure` in prod, `maxAge: 7d`), return `{ user }`
+  - [x] 3.5 Implement `auth.signOut` protected procedure — clear `session` cookie, return `{ success: true }`
+  - [x] 3.6 Implement `auth.me` protected procedure — return `ctx.user`
+  - [x] 3.6b Implement `auth.demoLogin` public mutation (P0) — only when `ENABLE_DEMO_LOGIN=true`; input `email` enum `demo@chaiforms.dev` \| `admin@chaiforms.dev`; load seeded user, `signJwt`, set `session` cookie; return `{ user }`; otherwise `NOT_FOUND`; add OpenAPI meta
+  - [x] 3.6c On OAuth `auth.callback`, if Google email matches `demo@chaiforms.dev` or `admin@chaiforms.dev`, upsert user with that email and preserve/link existing seeded user id so dashboard shows seeded forms
+  - [x] 3.6d Add `ENABLE_DEMO_LOGIN` to `apps/api/src/env.ts` and `.env.example`; document in README Demo Credentials
+  - [x] 3.6e Add demo sign-in UI on `/login` when `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true` — buttons "Continue as Demo Creator" / "Continue as Admin" calling `auth.demoLogin`
+  - [x] 3.7 Write unit tests in `packages/trpc/server/__tests__/auth.test.ts` — callback success, callback with invalid code (400), signOut clears cookie, `protectedProcedure` rejects missing/invalid JWT, `adminProcedure` rejects non-admin role, `demoLogin` gated by env flag
+  - [x] 3.8 Write property-based test `packages/trpc/server/__tests__/jwt.property.test.ts` — **Property 20: JWT authentication context attachment** — for any valid userId string, `signJwt` then `verifyJwt` round-trip returns the same `sub`; for any tampered token string, `verifyJwt` throws
 
 
 ---
@@ -191,28 +191,28 @@ All P0 phases → Phase 21 (Deployed demo)
 
 ### Phase 5: Email Notification Service (P1)
 
-- [ ] 10. Implement `NotificationService` in `packages/services`
-  - [ ] 10.1 Add `resend` to `packages/services/package.json` dependencies
-  - [ ] 10.2 Create `packages/services/notification/index.ts` — implement `NotificationService` class with `sendSubmissionEmails(opts)` method; send creator notification email and optional respondent confirmation email via Resend SDK; catch and log all errors via `@repo/logger`; never throw or await — fire-and-forget via `void Promise.allSettled(tasks)`
-  - [ ] 10.3 Create `packages/services/notification/templates.ts` — implement `creatorEmailHtml(opts)` and `respondentEmailHtml(opts)` template functions returning HTML strings with form title, submission timestamp, and dashboard link
-  - [ ] 10.4 Export `NotificationService` from `packages/services/package.json` exports map
-  - [ ] 10.5 Add `RESEND_API_KEY` to `apps/api/src/env.ts` validation schema
-  - [ ] 10.6 Instantiate `NotificationService` in the `responses.submit` handler and call `sendSubmissionEmails` without `await` after DB writes complete
-  - [ ] 10.7 Write unit tests in `packages/services/notification/__tests__/notification.test.ts` — creator email sent on every submission, respondent email sent only when `sendRespondentConfirmation = true` and `respondentEmail` present, email failure is logged and does not throw
+- [x] 10. Implement `NotificationService` in `packages/services`
+  - [x] 10.1 Add `resend` to `packages/services/package.json` dependencies
+  - [x] 10.2 Create `packages/services/notification/index.ts` — implement `NotificationService` class with `sendSubmissionEmails(opts)` method; send creator notification email and optional respondent confirmation email via Resend SDK; catch and log all errors via `@repo/logger`; never throw or await — fire-and-forget via `void Promise.allSettled(tasks)`
+  - [x] 10.3 Create `packages/services/notification/templates.ts` — implement `creatorEmailHtml(opts)` and `respondentEmailHtml(opts)` template functions returning HTML strings with form title, submission timestamp, and dashboard link
+  - [x] 10.4 Export `NotificationService` from `packages/services/package.json` exports map
+  - [x] 10.5 Add `RESEND_API_KEY` to `apps/api/src/env.ts` validation schema
+  - [x] 10.6 Instantiate `NotificationService` in the `responses.submit` handler and call `sendSubmissionEmails` without `await` after DB writes complete
+  - [x] 10.7 Write unit tests in `packages/services/notification/__tests__/notification.test.ts` — creator email sent on every submission, respondent email sent only when `sendRespondentConfirmation = true` and `respondentEmail` present, email failure is logged and does not throw
 
 
 ---
 
 ### Phase 6: Next.js Auth Middleware & Route Guards (P0)
 
-- [ ] 11. Implement Next.js auth middleware and route structure
-  - [ ] 11.1 Add `jose` to `apps/web/package.json` dependencies (Edge Runtime-compatible JWT verification)
-  - [ ] 11.2 Create `apps/web/middleware.ts` — read `session` cookie, verify JWT with `jose` using `JWT_SECRET`; redirect `/dashboard/*` → `/login` if unauthenticated; redirect `/login` → `/dashboard` if already authenticated; **do not** role-check `/admin/*` here (admin role enforced in `admin/layout.tsx` via server-side `admin.getStats`); export `config.matcher` including `/admin/:path*`
-  - [ ] 11.3 Add `JWT_SECRET` and `NEXT_PUBLIC_API_URL` to `apps/web/env.js` validation schema
-  - [ ] 11.4 Create `apps/web/app/auth/callback/page.tsx` — client component that reads `?code=` from URL, calls `trpc.auth.callback.useQuery({ code })`, on success redirects to `/dashboard`, on error shows error toast and link back to `/login`
-  - [ ] 11.5 Create `apps/web/app/login/page.tsx` — render "Sign in with Google" button that calls `trpc.auth.getSupportedAuthenticationProviders` and redirects to the returned `authUrl`; redirect authenticated users to `/dashboard`
-  - [ ] 11.6 Create `apps/web/app/dashboard/layout.tsx` — server component that reads session cookie, calls `trpc.auth.me` server-side; if unauthenticated redirect to `/login`; render dashboard shell (sidebar nav, header with user avatar and sign-out button)
-  - [ ] 11.7 Create `apps/web/app/admin/layout.tsx` — server component; call `trpc.admin.getStats` server-side; catch `FORBIDDEN` and redirect to `/dashboard`; render admin shell
+- [x] 11. Implement Next.js auth middleware and route structure
+  - [x] 11.1 Add `jose` to `apps/web/package.json` dependencies (Edge Runtime-compatible JWT verification)
+  - [x] 11.2 Create `apps/web/proxy.ts` (Next.js 16) — read `session` cookie, verify JWT with `jose` using `JWT_SECRET`; redirect `/dashboard/*` → `/login` if unauthenticated; redirect `/login` → `/dashboard` if already authenticated; **do not** role-check `/admin/*` here (admin role enforced in `admin/layout.tsx` via server-side `admin.getStats`); export `config.matcher` including `/admin/:path*`
+  - [x] 11.3 Add `JWT_SECRET` and `NEXT_PUBLIC_API_URL` to `apps/web/env.js` validation schema
+  - [x] 11.4 Create `apps/web/app/auth/callback/page.tsx` — client component that reads `?code=` from URL, calls `trpc.auth.callback.useQuery({ code })`, on success redirects to `/dashboard`, on error shows error toast and link back to `/login`
+  - [x] 11.5 Create `apps/web/app/login/page.tsx` — render "Sign in with Google" button that calls `trpc.auth.getSupportedAuthenticationProviders` and redirects to the returned `authUrl`; redirect authenticated users to `/dashboard`
+  - [x] 11.6 Create `apps/web/app/dashboard/layout.tsx` — server component that reads session cookie, calls `trpc.auth.me` server-side; if unauthenticated redirect to `/login`; render dashboard shell (sidebar nav, header with user avatar and sign-out button)
+  - [x] 11.7 Create `apps/web/app/admin/layout.tsx` — server component; call `trpc.admin.getStats` server-side; catch `FORBIDDEN` and redirect to `/dashboard`; render admin shell
 
 
 ---
