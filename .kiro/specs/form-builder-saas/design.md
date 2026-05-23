@@ -2,7 +2,7 @@
 
 ## Overview
 
-ChaiForms is a Typeform-style form builder SaaS layered on top of the existing Turborepo monorepo. Authenticated creators build, publish, and analyze forms; unauthenticated respondents fill and submit them via shareable links. The system reuses the existing Express + tRPC v11 backend, Next.js 16 frontend, Drizzle ORM + PostgreSQL data layer, and Google OAuth infrastructure, extending each with new tables, procedures, and UI surfaces.
+ChaiForms is a Typeform-style form builder SaaS layered on top of the existing Turborepo monorepo. Authenticated creators build, publish, and analyze forms; unauthenticated respondents fill and submit them via shareable links. The system reuses the existing Express + tRPC v11 backend, Next.js 16 frontend, Drizzle ORM + PostgreSQL data layer, and Google OAuth infrastructure, extending each with new tables, procedures, and UI surfaces
 
 ### Key Design Goals
 

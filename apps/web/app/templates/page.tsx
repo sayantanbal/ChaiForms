@@ -1,0 +1,106 @@
+import { api } from "~/trpc/server";
+import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Templates — ChaiForms",
+  description: "Start your form from a curated ChaiForms template. Anime, startup, OS, and more.",
+};
+
+const THEME_GRADIENTS: Record<string, string> = {
+  anime: "from-pink-500 to-purple-600",
+  startup: "from-orange-500 to-amber-600",
+  os: "from-cyan-500 to-blue-600",
+  game: "from-green-500 to-emerald-600",
+  movie: "from-red-500 to-rose-600",
+  tech_company: "from-blue-500 to-indigo-600",
+  event: "from-yellow-500 to-orange-600",
+  default: "from-gray-500 to-slate-600",
+};
+
+const THEME_EMOJIS: Record<string, string> = {
+  anime: "🌸", startup: "🚀", os: "🖥️", game: "🎮",
+  movie: "🎬", tech_company: "💻", event: "🎉", default: "📝",
+};
+
+async function getTemplates() {
+  try {
+    return await api.explore.listTemplates.query();
+  } catch {
+    return [];
+  }
+}
+
+export default async function TemplatesPage() {
+  const templates = await getTemplates();
+
+  return (
+    <div className="min-h-screen bg-gray-950 text-white">
+      {/* Nav */}
+      <nav className="border-b border-white/10 bg-gray-950/80 backdrop-blur-xl sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <span>☕</span>
+            <span className="font-bold bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">ChaiForms</span>
+          </Link>
+          <div className="flex items-center gap-4 text-sm">
+            <Link href="/explore" className="text-gray-400 hover:text-white transition-colors">Explore</Link>
+            <Link href="/auth/sign-in" className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-lg transition-colors font-semibold">
+              Sign In
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-5xl mx-auto px-4 py-10">
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-bold mb-3">Form Templates</h1>
+          <p className="text-gray-400 text-lg">
+            Start fast with a curated template. Sign in to customize and publish.
+          </p>
+        </div>
+
+        {templates.length === 0 ? (
+          <div className="text-center py-16 text-gray-500">
+            <div className="text-4xl mb-4">📭</div>
+            <p>No templates yet — check back soon!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {templates.map((template) => (
+              <div
+                key={template.id}
+                className="border border-white/10 rounded-2xl overflow-hidden hover:border-white/30 transition-all hover:-translate-y-0.5 group"
+              >
+                {/* Theme header */}
+                <div className={`bg-gradient-to-r ${THEME_GRADIENTS[template.theme] ?? THEME_GRADIENTS.default} p-6 text-center`}>
+                  <div className="text-4xl mb-2">{THEME_EMOJIS[template.theme] ?? "📝"}</div>
+                  <div className="text-xs font-semibold text-white/70 uppercase tracking-wider">
+                    {template.theme.replace("_", " ")} theme
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="bg-gray-800/50 p-5">
+                  <h2 className="font-bold text-lg mb-1 group-hover:text-orange-400 transition-colors">
+                    {template.title}
+                  </h2>
+                  <p className="text-gray-400 text-sm line-clamp-2 mb-4">{template.description}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">{(template.fields as unknown[]).length} fields</span>
+                    <Link
+                      href="/auth/sign-in"
+                      className={`text-xs px-4 py-2 bg-gradient-to-r ${THEME_GRADIENTS[template.theme] ?? THEME_GRADIENTS.default} text-white font-semibold rounded-lg hover:opacity-90 transition-all`}
+                    >
+                      Use Template →
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

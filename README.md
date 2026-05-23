@@ -1,32 +1,58 @@
-# ChaiForms
+# ChaiForms ☕
 
-ChaiForms is a Typeform-style form builder SaaS built on a Turborepo monorepo. Creators authenticate with Google OAuth, build themed forms with drag-and-drop, publish shareable links, and view analytics. Respondents submit forms without an account.
+ChaiForms is a Typeform-style form builder SaaS built on a Turborepo monorepo. Creators authenticate with Neon Auth (Better Auth), build themed forms with drag-and-drop, publish shareable links, and view real-time analytics. Respondents submit forms without an account.
+
+## Features
+- **🎨 8 Stunning Themes:** Anime, startup, tech, OS, game, movie, event — each form tells a story.
+- **⚡ Drag & Drop Builder:** 9 field types, conditional logic, multi-page forms.
+- **📊 Real-time Analytics:** Track responses, completion rates, and field breakdowns with beautiful charts.
+- **🔒 Password Protection & Visibility:** Public, unlisted, and password-protected forms.
+- **🌐 Public Explore Gallery:** Discover public forms and start from community templates.
 
 ## Monorepo structure
 
 | Path | Purpose |
 | --- | --- |
-| `apps/web` | Next.js 16 frontend (ChaiForms_Web) |
-| `apps/api` | Express + tRPC API server (ChaiForms_Server) |
-| `packages/schemas` | Shared Zod schemas (`FieldSchemaUnion`, form settings, responses) |
-| `packages/trpc` | tRPC routers and server/client exports |
-| `packages/database` | Drizzle ORM schema and migrations |
-| `packages/services` | Google OAuth, user services |
-| `packages/logger` | Winston logging |
+| `apps/web` | Next.js 15 frontend with Tailwind CSS v4 & tRPC Client |
+| `apps/api` | Express + tRPC API server with SWC compilation |
+| `packages/schemas` | Shared Zod schemas (`FieldSchemaUnion`, form settings, responses, analytics) |
+| `packages/trpc` | tRPC routers (forms, analytics, explore, admin, responses) |
+| `packages/database` | Drizzle ORM schema, migrations, and seed script |
 
 ## Local development
 
 ```sh
 pnpm install
-cp .env.example .env   # DATABASE_URL can be Neon or local Postgres (see docs/documentation.md)
-pnpm db:migrate        # applies migrations to DATABASE_URL
-pnpm db:seed           # available after Phase 15
-pnpm dev
+# Create .env based on .env.example (Add your PostgreSQL URL and Neon Auth keys)
+cp .env.example .env
+
+pnpm db:migrate        # applies migrations
+pnpm db:seed           # creates demo users, 3 templates, 3 published forms, and 75+ responses
+pnpm dev               # starts both apps/api and apps/web
 ```
 
-- Web: http://localhost:3000
-- API: http://localhost:3001 (default)
-- API docs (Scalar): http://localhost:3001/docs
+- Web App: http://localhost:3000
+- API Server: http://localhost:3001
+
+## Demo credentials
+
+After running `pnpm db:seed`, you can log in using the `chaiforms-demo-session` bypass (if configured) or standard email flow:
+
+- **Creator Account:** `demo@chaiforms.dev`
+- **Admin Account:** `admin@chaiforms.dev`
+- **Password-protected demo form slug:** `startup-idea-validator`
+- **Demo form password:** `demo1234`
+
+## Implementation status
+
+| Phase | Status | Description |
+| --- | --- | --- |
+| 1 — Schemas | ✅ Complete | `@repo/schemas` package with field union + tests |
+| 2 — Database | ✅ Complete | Forms, responses, answers, templates + migrations |
+| 3 — Auth & security | ✅ Complete | Neon Auth integration, Upstash rate limit |
+| 4 — Backend Routers | ✅ Complete | tRPC routers for forms, analytics, explore, admin, and responses |
+| 5 — Web Pages | ✅ Complete | Next.js pages: builder, dashboard, analytics, public `/f/[slug]`, templates |
+| 6 — Deployment | 🔲 Pending | Vercel (web) and Cloud Run (api) deployment |
 
 ## Scripts
 
@@ -36,46 +62,8 @@ pnpm dev
 | `pnpm build` | Build all apps and packages |
 | `pnpm test` | Run Vitest tests across packages |
 | `pnpm db:migrate` | Apply Drizzle migrations |
-| `pnpm db:generate` | Generate migration SQL after schema changes |
-| `pnpm check-types` | TypeScript check |
-
-## Implementation status
-
-See [docs/documentation.md](./docs/documentation.md) for detailed architecture, schemas, and phase-by-phase progress.
-
-| Phase | Status | Description |
-| --- | --- | --- |
-| 1 — Schemas | ✅ Complete | `@repo/schemas` package with field union + tests |
-| 2 — Database | ✅ Complete | Forms, responses, answers, templates + migration `0001` |
-| 3 — Auth & security | 🟡 Partial | Neon Auth, CSRF, Upstash rate limit, device/geo on responses |
-| 4+ | 🔲 Pending | Routers, UI, seed, deploy |
-
-## Demo credentials
-
-Documented in full after Phase 3 and Phase 15 (seed script):
-
-- Creator: `demo@chaiforms.dev`
-- Admin: `admin@chaiforms.dev`
-- Password-protected demo form: `demo1234`
-
-## Deployment (planned)
-
-| Component | Platform |
-| --- | --- |
-| ChaiForms_Web (`apps/web`) | [Vercel](https://vercel.com) |
-| ChaiForms_Server (`apps/api`) | [Google Cloud Run](https://cloud.google.com/run) |
-| PostgreSQL | Neon (or managed Postgres on GCP) |
-
-Cross-origin auth requires `WEB_ORIGIN` on the API (Vercel URL) and `credentials: "include"` on the web tRPC client.
-
-## Submission artifacts
-
-Fill in after deployment (Phase 21):
-
-- GitHub repository: _(TBD)_
-- Deployed web app (Vercel): _(TBD)_
-- API base URL (Cloud Run): _(TBD)_
-- Scalar API docs: `{API_BASE_URL}/docs`
+| `pnpm db:seed` | Seed database with demo data |
+| `pnpm check-types` | TypeScript check across monorepo |
 
 ## Specs
 
