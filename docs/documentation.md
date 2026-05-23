@@ -44,6 +44,10 @@ Respondent → /f/{slug} → forms.getBySlug → FormRenderer
 | Rebranding | Incremental when touching files (Streamyst → ChaiForms); full pass in Phase 19 |
 | Web deploy | **Vercel** (`apps/web`) |
 | API deploy | **Google Cloud Run** (`apps/api`) |
+| Authentication | **Neon Auth** (`@neondatabase/auth`) — sessions in `neon_auth` schema |
+| Rate limiting | **Upstash Redis** — key = `IP:deviceFingerprint` (10 / 60s on submit) |
+| Device identity | **ua-parser-js** + SHA-256 fingerprint stored on each response |
+| CSRF | Signed `x-csrf-token` + `Origin` check (Vercel ↔ Cloud Run safe) |
 | Migrations | `pnpm db:generate` then `pnpm db:migrate` (loads `../../.env` from `packages/database`) |
 
 ### Cross-origin setup (Vercel + Cloud Run)
@@ -249,10 +253,66 @@ Database package scripts load env from **monorepo root** `.env` via `dotenv -e .
 
 ## Upcoming phases
 
-### Phase 3: Auth (P0)
+### Phase 3: Auth, security & rate limiting (P0 — in progress)
 
-- JWT utilities, `protectedProcedure`, `adminProcedure`
-- Cookie parser, CORS credentials, demo login
+**Status:** 🟡 Partial (Neon Auth, CSRF, Upstash, device context implemented; full OAuth/demo flows pending seed)
+
+#### Neon Auth (web)
+
+- `apps/web/lib/auth/server.ts` — `createNeonAuth`
+- `apps/web/app/api/auth/[...path]/route.ts` — auth API proxy
+- `apps/web/middleware.ts` — protects `/dashboard/*`, `/admin/*`
+- Sign-in / sign-up at `/auth/sign-in`, `/auth/sign-up`
+
+Required env (from Neon Console → Auth → Configuration):
+
+```bash
+NEON_AUTH_BASE_URL=https://ep-xxx.neonauth.../neondb/auth
+NEON_AUTH_COOKIE_SECRET=...  # openssl rand -base64 32
+```
+
+#### API session resolution
+
+`tRPC createContext` reads:
+
+1. `Authorization: Bearer <neon_session_token>` (from web `authClient.getSession()`)
+2. `better-auth.session_token` cookie (same-origin only)
+3. `chaiforms-demo-session` cookie (when `ENABLE_DEMO_LOGIN=true`)
+
+Looks up `neon_auth.session` + `neon_auth.user`, upserts `users` (links `neon_auth_user_id`).
+
+#### CSRF (mutations)
+
+- Web: `GET /api/csrf` issues signed token + sets `chaiforms-csrf` cookie
+- Client: `x-csrf-token` header on every tRPC mutation via `getTrpcHeaders()`
+- API: validates HMAC signature + `WEB_ORIGIN` on `Origin`/`Referer`
+- Also: `GET {API}/csrf` on Cloud Run for direct API clients
+
+#### Upstash rate limiting
+
+`responses.submit` calls `assertSubmitRateLimit(\`${ip}:${deviceFingerprint}\`)` — **10 requests / 60 seconds** per IP **and** device fingerprint (same IP, different devices get separate buckets).
+
+#### Device & geo on responses
+
+Server parses `User-Agent` with **ua-parser-js** and stores on `responses`:
+
+| Column | Source |
+| --- | --- |
+| `device_fingerprint` | SHA-256 of UA + OS + browser + device |
+| `device_type` | mobile / tablet / desktop / … |
+| `os_name`, `os_version` | UA parser |
+| `browser_name`, `browser_version` | UA parser |
+| `device_vendor`, `device_model` | UA parser |
+| `ip_address` | `x-forwarded-for` or `req.ip` |
+| `latitude`, `longitude` | Optional `clientContext.geo` from browser Geolocation API |
+
+Use `getClientGeoContext()` from `apps/web/lib/client-context.ts` when building submit payloads.
+
+#### Remaining Phase 3 tasks
+
+- [ ] Property tests for JWT (if demo cookie path retained)
+- [ ] `auth.demoLogin` UI on login when `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true`
+- [ ] Full answer persistence on `responses.submit` (Phase 4)
 
 ### Phase 4+: tRPC routers, UI, seed, deploy
 

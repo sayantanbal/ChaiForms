@@ -5,15 +5,25 @@
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/ua-parser-js": "^0.7.39",
     "dotenv-cli": "^11.0.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@repo/database": "workspace:*",
+    "drizzle-orm": "^0.45.1",
+    "google-auth-library": "^10.5.0",
+    "@repo/logger": "workspace:*",
     "@repo/schemas": "workspace:*",
     "@repo/services": "workspace:*",
     "@trpc/client": "^11.8.1",
     "@trpc/server": "^11.8.1",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.36.2",
+    "jsonwebtoken": "^9.0.2",
     "trpc-to-openapi": "^3.1.0",
+    "ua-parser-js": "^2.0.3",
     "zod": "^4.3.5"
   }
 }

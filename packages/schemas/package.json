@@ -8,7 +8,8 @@
     "./fields": "./src/fields/index.ts",
     "./form-settings": "./src/form-settings.ts",
     "./response": "./src/response.ts",
-    "./analytics": "./src/analytics.ts"
+    "./analytics": "./src/analytics.ts",
+    "./client-context": "./src/client-context.ts"
   },
   "scripts": {
     "test": "vitest run",

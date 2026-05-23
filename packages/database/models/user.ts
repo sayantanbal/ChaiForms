@@ -20,6 +20,9 @@ export const usersTable = pgTable("users", {
 
   profileImageUrl: text("profile_image_url"),
 
+  /** Links to `neon_auth.user.id` when signed in via Neon Auth. */
+  neonAuthUserId: text("neon_auth_user_id").unique(),
+
   role: userRoleEnum("role").default("creator").notNull(),
 
   createdAt: timestamp("created_at").defaultNow(),

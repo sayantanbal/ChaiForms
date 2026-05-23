@@ -2,8 +2,18 @@ import { z } from "zod";
 
 const envSchema = z.object({
   PORT: z.string().optional(),
-  NODE_ENV: z.enum(["development", "prod"]).default("development"),
+  NODE_ENV: z
+    .enum(["development", "production", "test", "prod"])
+    .default("development")
+    .transform((v) => (v === "prod" ? "production" : v)),
   BASE_URL: z.string().default("http://localhost:8000"),
+  WEB_ORIGIN: z.string().default("http://localhost:3000"),
+  JWT_SECRET: z.string().min(32).optional(),
+  CSRF_SECRET: z.string().min(32).optional(),
+  NEON_AUTH_COOKIE_SECRET: z.string().min(32).optional(),
+  UPSTASH_REDIS_REST_URL: z.string().url(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1),
+  ENABLE_DEMO_LOGIN: z.enum(["true", "false"]).optional(),
 });
 
 function createEnv(env: NodeJS.ProcessEnv) {

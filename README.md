@@ -47,7 +47,7 @@ See [docs/documentation.md](./docs/documentation.md) for detailed architecture, 
 | --- | --- | --- |
 | 1 — Schemas | ✅ Complete | `@repo/schemas` package with field union + tests |
 | 2 — Database | ✅ Complete | Forms, responses, answers, templates + migration `0001` |
-| 3 — Auth | 🔲 Pending | JWT, cookies, demo login |
+| 3 — Auth & security | 🟡 Partial | Neon Auth, CSRF, Upstash rate limit, device/geo on responses |
 | 4+ | 🔲 Pending | Routers, UI, seed, deploy |
 
 ## Demo credentials
