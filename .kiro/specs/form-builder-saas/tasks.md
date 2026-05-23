@@ -219,11 +219,11 @@ All P0 phases → Phase 21 (Deployed demo)
 
 ### Phase 7: Theme System (P1)
 
-- [ ] 12. Implement theme system
-  - [ ] 12.1 Create `apps/web/lib/themes.ts` — define `THEMES` record with all 8 theme keys (`default`, `anime`, `movie`, `game`, `startup`, `tech_company`, `os`, `event`), each mapping CSS variable names to HSL values; export `ThemeKey` type
-  - [ ] 12.2 Add CSS variable contract to `apps/web/app/globals.css` — define `--form-bg`, `--form-surface`, `--form-primary`, `--form-primary-fg`, `--form-accent`, `--form-text`, `--form-muted`, `--form-border`, `--form-radius`, `--form-font` on `:root`
-  - [ ] 12.3 Create `apps/web/components/form-renderer/themed-form-wrapper.tsx` — apply `THEMES[theme]` as inline `style` CSS variables on a wrapper `div` with `bg-[var(--form-bg)]` and `text-[var(--form-text)]` Tailwind classes
-  - [ ] 12.4 Write unit tests in `apps/web/lib/__tests__/themes.test.ts` — all 8 themes define all required CSS variables; `ThemeKey` type covers all 8 values
+- [x] 12. Implement theme system
+  - [x] 12.1 Create `apps/web/lib/themes.ts` — define `THEMES` record with all 8 theme keys (`default`, `anime`, `movie`, `game`, `startup`, `tech_company`, `os`, `event`), each mapping CSS variable names to HSL values; export `ThemeKey` type
+  - [x] 12.2 Add CSS variable contract to `apps/web/app/globals.css` — define `--form-bg`, `--form-surface`, `--form-primary`, `--form-primary-fg`, `--form-accent`, `--form-text`, `--form-muted`, `--form-border`, `--form-radius`, `--form-font` on `:root`
+  - [x] 12.3 Create `apps/web/components/form-renderer/themed-form-wrapper.tsx` — apply `THEMES[theme]` as inline `style` CSS variables on a wrapper `div` with `bg-[var(--form-bg)]` and `text-[var(--form-text)]` Tailwind classes
+  - [x] 12.4 Write unit tests in `apps/web/lib/__tests__/themes.test.ts` — all 8 themes define all required CSS variables; `ThemeKey` type covers all 8 values
 
 
 ---

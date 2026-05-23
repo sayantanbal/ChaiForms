@@ -1,33 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "~/trpc/client";
 import { toast } from "sonner";
 import type { FieldSchemaUnion } from "@repo/schemas";
+import { ThemedFormWrapper } from "~/components/form-renderer/themed-form-wrapper";
+import { resolveThemeKey } from "~/lib/themes";
 
-const THEME_GRADIENTS: Record<string, string> = {
-  anime: "from-pink-900 via-purple-900 to-indigo-900",
-  startup: "from-orange-900 via-amber-900 to-yellow-900",
-  os: "from-gray-900 via-cyan-900 to-blue-900",
-  game: "from-emerald-900 via-green-900 to-teal-900",
-  movie: "from-red-900 via-rose-900 to-pink-900",
-  tech_company: "from-blue-900 via-indigo-900 to-purple-900",
-  event: "from-yellow-900 via-orange-900 to-red-900",
-  default: "from-gray-900 via-gray-900 to-gray-800",
-};
+const inputCls =
+  "w-full rounded-[var(--form-radius)] border border-[var(--form-border)] bg-[var(--form-surface)] px-4 py-3 text-[var(--form-text)] placeholder:text-[var(--form-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--form-primary)] transition-all";
 
-const THEME_ACCENT: Record<string, string> = {
-  anime: "from-pink-500 to-purple-500",
-  startup: "from-orange-500 to-amber-500",
-  os: "from-cyan-500 to-blue-500",
-  game: "from-green-500 to-emerald-500",
-  movie: "from-red-500 to-rose-500",
-  tech_company: "from-blue-500 to-indigo-500",
-  event: "from-yellow-500 to-orange-500",
-  default: "from-gray-500 to-gray-400",
-};
+const cardCls =
+  "rounded-[var(--form-radius)] border border-[var(--form-border)] bg-[var(--form-surface)] p-5 shadow-sm";
+
+const btnPrimaryCls =
+  "bg-[var(--form-primary)] text-[var(--form-primary-fg)] font-bold rounded-[var(--form-radius)] transition-all hover:opacity-90 disabled:opacity-50";
 
 type AnswerMap = Record<string, string>;
 
@@ -40,9 +29,6 @@ function FieldRenderer({
   value: string;
   onChange: (v: string) => void;
 }) {
-  const accentCls = "border-white/30 bg-white/10";
-  const inputCls = "w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/20 transition-all";
-
   if (field.type === "short_text") {
     return (
       <input
@@ -104,14 +90,20 @@ function FieldRenderer({
 
   if (field.type === "checkbox") {
     return (
-      <label className="flex items-center gap-3 cursor-pointer group">
+      <label className="flex cursor-pointer items-center gap-3">
         <div
-          className={`w-6 h-6 rounded border-2 ${value === "true" ? "bg-white border-white" : "border-white/30 bg-white/5"} flex items-center justify-center transition-all`}
+          className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-all ${
+            value === "true"
+              ? "border-[var(--form-primary)] bg-[var(--form-primary)]"
+              : "border-[var(--form-border)] bg-[var(--form-surface)]"
+          }`}
           onClick={() => onChange(value === "true" ? "false" : "true")}
         >
-          {value === "true" && <span className="text-gray-900 text-xs">✓</span>}
+          {value === "true" && (
+            <span className="text-xs text-[var(--form-primary-fg)]">✓</span>
+          )}
         </div>
-        <span className="text-white/80">{field.label}</span>
+        <span className="text-[var(--form-text)]">{field.label}</span>
       </label>
     );
   }
@@ -122,11 +114,12 @@ function FieldRenderer({
         {field.options.map((opt) => (
           <button
             key={opt}
+            type="button"
             onClick={() => onChange(value === opt ? "" : opt)}
-            className={`px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+            className={`rounded-[var(--form-radius)] border px-4 py-2.5 text-sm font-medium transition-all ${
               value === opt
-                ? "bg-white text-gray-900 border-white"
-                : "border-white/30 text-white/80 hover:border-white/60 hover:bg-white/10"
+                ? "border-[var(--form-primary)] bg-[var(--form-primary)] text-[var(--form-primary-fg)]"
+                : "border-[var(--form-border)] bg-[var(--form-accent)] text-[var(--form-text)] hover:border-[var(--form-primary)]"
             }`}
           >
             {opt}
@@ -138,9 +131,15 @@ function FieldRenderer({
 
   if (field.type === "multi_select") {
     let selected: string[] = [];
-    try { selected = value ? JSON.parse(value) as string[] : []; } catch { selected = []; }
+    try {
+      selected = value ? (JSON.parse(value) as string[]) : [];
+    } catch {
+      selected = [];
+    }
     const toggle = (opt: string) => {
-      const next = selected.includes(opt) ? selected.filter((s) => s !== opt) : [...selected, opt];
+      const next = selected.includes(opt)
+        ? selected.filter((s) => s !== opt)
+        : [...selected, opt];
       onChange(JSON.stringify(next));
     };
     return (
@@ -148,14 +147,16 @@ function FieldRenderer({
         {field.options.map((opt) => (
           <button
             key={opt}
+            type="button"
             onClick={() => toggle(opt)}
-            className={`px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+            className={`rounded-[var(--form-radius)] border px-4 py-2.5 text-sm font-medium transition-all ${
               selected.includes(opt)
-                ? "bg-white text-gray-900 border-white"
-                : "border-white/30 text-white/80 hover:border-white/60 hover:bg-white/10"
+                ? "border-[var(--form-primary)] bg-[var(--form-primary)] text-[var(--form-primary-fg)]"
+                : "border-[var(--form-border)] bg-[var(--form-accent)] text-[var(--form-text)] hover:border-[var(--form-primary)]"
             }`}
           >
-            {selected.includes(opt) ? "✓ " : ""}{opt}
+            {selected.includes(opt) ? "✓ " : ""}
+            {opt}
           </button>
         ))}
       </div>
@@ -163,22 +164,25 @@ function FieldRenderer({
   }
 
   if (field.type === "rating") {
-    const current = value ? parseInt(value) : 0;
+    const current = value ? parseInt(value, 10) : 0;
     return (
       <div className="flex gap-2">
         {[...Array(field.maxRating)].map((_, i) => (
           <button
             key={i}
+            type="button"
             onClick={() => onChange(String(i + 1))}
             className={`text-3xl transition-all hover:scale-110 ${
-              i < current ? "text-yellow-400" : "text-white/20"
+              i < current ? "text-[var(--form-primary)]" : "text-[var(--form-muted)]"
             }`}
           >
             ★
           </button>
         ))}
         {current > 0 && (
-          <span className="self-end text-white/60 text-sm ml-2">{current}/{field.maxRating}</span>
+          <span className="ml-2 self-end text-sm text-[var(--form-muted)]">
+            {current}/{field.maxRating}
+          </span>
         )}
       </div>
     );
@@ -189,7 +193,6 @@ function FieldRenderer({
 
 export default function PublicFormPage() {
   const { slug } = useParams<{ slug: string }>();
-  const router = useRouter();
 
   const [answers, setAnswers] = useState<AnswerMap>({});
   const [submitted, setSubmitted] = useState(false);
@@ -199,6 +202,7 @@ export default function PublicFormPage() {
   const [password, setPassword] = useState("");
 
   const { data: form, isLoading, error } = trpc.forms.getBySlug.useQuery({ slug });
+  const theme = resolveThemeKey(form?.theme);
 
   useEffect(() => {
     if (form?.hasPassword && !unlockToken) {
@@ -224,7 +228,6 @@ export default function PublicFormPage() {
     if (!form) return;
     const fields = (form.fields as FieldSchemaUnion[]) ?? [];
 
-    // Client-side required validation
     for (const field of fields) {
       const val = answers[field.id] ?? "";
       if (field.required && val.trim() === "") {
@@ -243,123 +246,133 @@ export default function PublicFormPage() {
     });
   };
 
-  const gradient = THEME_GRADIENTS[form?.theme ?? "default"] ?? THEME_GRADIENTS.default!;
-  const accent = THEME_ACCENT[form?.theme ?? "default"] ?? THEME_ACCENT.default!;
-
   if (isLoading) {
     return (
-      <div className={`min-h-screen bg-gradient-to-br ${gradient} flex items-center justify-center`}>
-        <div className="text-white/60 animate-pulse">Loading form...</div>
-      </div>
+      <ThemedFormWrapper theme="default" className="flex items-center justify-center">
+        <div className="animate-pulse text-[var(--form-muted)]">Loading form...</div>
+      </ThemedFormWrapper>
     );
   }
 
   if (error || !form) {
     return (
-      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4 text-white">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-950 text-white">
         <div className="text-5xl">😢</div>
         <h1 className="text-2xl font-bold">Form not found</h1>
-        <p className="text-gray-400">This form may have been removed or the link is incorrect.</p>
-        <Link href="/" className="text-orange-400 hover:underline">← Go home</Link>
+        <p className="text-gray-400">
+          This form may have been removed or the link is incorrect.
+        </p>
+        <Link href="/" className="text-orange-400 hover:underline">
+          ← Go home
+        </Link>
       </div>
     );
   }
 
   const fields = (form.fields as FieldSchemaUnion[]) ?? [];
 
-  // Password gate
   if (showPasswordGate) {
     return (
-      <div className={`min-h-screen bg-gradient-to-br ${gradient} flex items-center justify-center p-4`}>
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 max-w-sm w-full text-white text-center">
-          <div className="text-4xl mb-4">🔒</div>
-          <h2 className="text-xl font-bold mb-2">Password Protected</h2>
-          <p className="text-white/60 text-sm mb-6">Enter the password to access this form</p>
+      <ThemedFormWrapper theme={theme} className="flex items-center justify-center p-4">
+        <div className={`${cardCls} mx-auto w-full max-w-sm text-center`}>
+          <div className="mb-4 text-4xl">🔒</div>
+          <h2 className="mb-2 text-xl font-bold">Password Protected</h2>
+          <p className="mb-6 text-sm text-[var(--form-muted)]">
+            Enter the password to access this form
+          </p>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && password) unlockMutation.mutate({ slug, password }); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && password) {
+                unlockMutation.mutate({ slug, password });
+              }
+            }}
             placeholder="Enter password..."
-            className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-white/50 mb-4"
+            className={`${inputCls} mb-4`}
           />
           <button
+            type="button"
             onClick={() => unlockMutation.mutate({ slug, password })}
             disabled={!password || unlockMutation.isPending}
-            className={`w-full bg-gradient-to-r ${accent} text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50`}
+            className={`w-full px-4 py-3 ${btnPrimaryCls}`}
           >
             {unlockMutation.isPending ? "Unlocking..." : "Unlock Form"}
           </button>
         </div>
-      </div>
+      </ThemedFormWrapper>
     );
   }
 
-  // Success state
   if (submitted) {
     return (
-      <div className={`min-h-screen bg-gradient-to-br ${gradient} flex items-center justify-center p-4`}>
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 max-w-lg w-full text-white text-center">
-          <div className="text-6xl mb-6">🎉</div>
-          <h2 className="text-2xl font-bold mb-3">Thank you!</h2>
-          <p className="text-white/70 mb-6 text-lg">
+      <ThemedFormWrapper theme={theme} className="flex items-center justify-center p-4">
+        <div className={`${cardCls} mx-auto w-full max-w-lg text-center`}>
+          <div className="mb-6 text-6xl">🎉</div>
+          <h2 className="mb-3 text-2xl font-bold">Thank you!</h2>
+          <p className="mb-6 text-lg text-[var(--form-muted)]">
             {form.thankyouMessage ?? "Your response has been recorded."}
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="flex flex-col justify-center gap-3 sm:flex-row">
             <Link
               href="/"
-              className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-sm font-semibold transition-all"
+              className="rounded-[var(--form-radius)] border border-[var(--form-border)] bg-[var(--form-accent)] px-6 py-3 text-sm font-semibold transition-all hover:opacity-90"
             >
               ☕ ChaiForms
             </Link>
             <button
-              onClick={() => { setSubmitted(false); setAnswers({}); }}
-              className={`px-6 py-3 bg-gradient-to-r ${accent} text-white font-bold rounded-xl text-sm transition-all`}
+              type="button"
+              onClick={() => {
+                setSubmitted(false);
+                setAnswers({});
+              }}
+              className={`px-6 py-3 text-sm ${btnPrimaryCls}`}
             >
               Submit Another Response
             </button>
           </div>
         </div>
-      </div>
+      </ThemedFormWrapper>
     );
   }
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${gradient}`}>
-      {/* Branding */}
-      <div className="absolute top-4 right-4">
+    <ThemedFormWrapper theme={theme}>
+      <div className="absolute right-4 top-4">
         <Link
           href="/"
-          className="text-white/50 hover:text-white/80 text-xs flex items-center gap-1.5 transition-colors"
+          className="flex items-center gap-1.5 text-xs text-[var(--form-muted)] transition-colors hover:text-[var(--form-text)]"
         >
           <span>☕</span>
           <span>Made with ChaiForms</span>
         </Link>
       </div>
 
-      <div className="min-h-screen flex flex-col items-center justify-start py-12 px-4">
+      <div className="flex min-h-screen flex-col items-center justify-start px-4 py-12">
         <div className="w-full max-w-xl">
-          {/* Form header */}
-          <div className="text-white mb-8 text-center">
-            <h1 className="text-3xl font-black mb-2">{form.title}</h1>
-            {form.description && <p className="text-white/70">{form.description}</p>}
+          <div className="mb-8 text-center">
+            <h1 className="mb-2 text-3xl font-black">{form.title}</h1>
+            {form.description && (
+              <p className="text-[var(--form-muted)]">{form.description}</p>
+            )}
           </div>
 
-          {/* Fields */}
           <div className="space-y-6">
             {fields.map((field) => (
-              <div
-                key={field.id}
-                className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-5 text-white"
-              >
+              <div key={field.id} className={cardCls}>
                 {field.type !== "checkbox" && (
-                  <label className="block mb-2 font-semibold">
+                  <label className="mb-2 block font-semibold">
                     {field.label}
-                    {field.required && <span className="text-red-300 ml-1">*</span>}
+                    {field.required && (
+                      <span className="ml-1 text-red-500">*</span>
+                    )}
                   </label>
                 )}
                 {field.description && (
-                  <p className="text-white/60 text-sm mb-3">{field.description}</p>
+                  <p className="mb-3 text-sm text-[var(--form-muted)]">
+                    {field.description}
+                  </p>
                 )}
                 <FieldRenderer
                   field={field}
@@ -370,25 +383,25 @@ export default function PublicFormPage() {
             ))}
           </div>
 
-          {/* Submit */}
           {fields.length > 0 && (
             <button
               id="submit-form-btn"
+              type="button"
               onClick={handleSubmit}
               disabled={submitMutation.isPending}
-              className={`mt-6 w-full bg-gradient-to-r ${accent} text-white font-bold py-4 rounded-2xl text-lg transition-all hover:scale-[1.02] disabled:opacity-60 shadow-lg`}
+              className={`mt-6 w-full px-4 py-4 text-lg shadow-lg ${btnPrimaryCls}`}
             >
               {submitMutation.isPending ? "Submitting..." : "Submit →"}
             </button>
           )}
 
           {fields.length === 0 && (
-            <div className="text-center text-white/40 py-8">
+            <div className="py-8 text-center text-[var(--form-muted)]">
               This form has no fields yet.
             </div>
           )}
         </div>
       </div>
-    </div>
+    </ThemedFormWrapper>
   );
 }

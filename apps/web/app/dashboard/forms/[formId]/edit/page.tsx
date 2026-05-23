@@ -7,6 +7,7 @@ import { trpc } from "~/trpc/client";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import type { FieldSchemaUnion } from "@repo/schemas";
+import { THEME_PICKER_OPTIONS } from "~/lib/themes";
 
 const FIELD_TYPES: { type: FieldSchemaUnion["type"]; label: string; icon: string }[] = [
   { type: "short_text", label: "Short Text", icon: "Aa" },
@@ -19,17 +20,6 @@ const FIELD_TYPES: { type: FieldSchemaUnion["type"]; label: string; icon: string
   { type: "rating", label: "Rating", icon: "★" },
   { type: "date", label: "Date", icon: "📅" },
 ];
-
-const THEMES = [
-  { value: "default", label: "Default", color: "bg-gray-500" },
-  { value: "anime", label: "Anime", color: "bg-pink-500" },
-  { value: "movie", label: "Movie", color: "bg-red-500" },
-  { value: "game", label: "Game", color: "bg-green-500" },
-  { value: "startup", label: "Startup", color: "bg-orange-500" },
-  { value: "tech_company", label: "Tech Co.", color: "bg-blue-500" },
-  { value: "os", label: "OS", color: "bg-cyan-500" },
-  { value: "event", label: "Event", color: "bg-yellow-500" },
-] as const;
 
 function createField(type: FieldSchemaUnion["type"]): FieldSchemaUnion {
   const base = { id: uuidv4(), label: `New ${type.replace("_", " ")} field`, required: false };
@@ -241,7 +231,7 @@ export default function FormBuilderPage() {
             {tab === "theme" && (
               <div className="space-y-2">
                 <p className="text-xs text-gray-500 mb-2 px-1">Choose a theme</p>
-                {THEMES.map((theme) => (
+                {THEME_PICKER_OPTIONS.map((theme) => (
                   <button
                     key={theme.value}
                     onClick={() => updateMutation.mutate({ formId, theme: theme.value })}

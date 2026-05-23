@@ -4,6 +4,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "~/trpc/client";
 import type { FieldSchemaUnion } from "@repo/schemas";
+import { ThemedFormWrapper } from "~/components/form-renderer/themed-form-wrapper";
+import { resolveThemeKey } from "~/lib/themes";
 
 export default function PreviewPage() {
   const { formId } = useParams<{ formId: string }>();
@@ -36,15 +38,18 @@ export default function PreviewPage() {
         </Link>
       </div>
 
-      <div className="bg-gray-800/50 border border-white/10 rounded-2xl overflow-hidden">
-        {/* Form header */}
-        <div className="p-6 border-b border-white/10">
-          <h1 className="text-2xl font-bold mb-2">{form.title}</h1>
-          {form.description && <p className="text-gray-400">{form.description}</p>}
+      <ThemedFormWrapper
+        theme={resolveThemeKey(form.theme)}
+        className="min-h-0 overflow-hidden rounded-2xl border border-[var(--form-border)]"
+      >
+        <div className="border-b border-[var(--form-border)] p-6">
+          <h1 className="mb-2 text-2xl font-bold">{form.title}</h1>
+          {form.description && (
+            <p className="text-[var(--form-muted)]">{form.description}</p>
+          )}
         </div>
 
-        {/* Fields preview */}
-        <div className="p-6 space-y-6">
+        <div className="space-y-6 p-6">
           {fields.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
               <div className="text-4xl mb-3">📋</div>
@@ -146,13 +151,13 @@ export default function PreviewPage() {
           {fields.length > 0 && (
             <button
               disabled
-              className="w-full bg-gradient-to-r from-orange-500/50 to-amber-500/50 text-white/50 font-bold py-3 rounded-xl cursor-not-allowed mt-4"
+              className="mt-4 w-full cursor-not-allowed rounded-[var(--form-radius)] bg-[var(--form-primary)] py-3 font-bold text-[var(--form-primary-fg)] opacity-50"
             >
               Submit (Preview Mode)
             </button>
           )}
         </div>
-      </div>
+      </ThemedFormWrapper>
     </div>
   );
 }

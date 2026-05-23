@@ -77,6 +77,18 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* ChaiForms themed form renderer contract */
+  --form-bg: hsl(0 0% 100%);
+  --form-surface: hsl(0 0% 98%);
+  --form-primary: hsl(221 83% 53%);
+  --form-primary-fg: hsl(0 0% 100%);
+  --form-accent: hsl(221 83% 95%);
+  --form-text: hsl(222 47% 11%);
+  --form-muted: hsl(215 16% 47%);
+  --form-border: hsl(214 32% 91%);
+  --form-radius: 0.5rem;
+  --form-font: "Geist", sans-serif;
 }
 
 .dark {
