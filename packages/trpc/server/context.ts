@@ -31,6 +31,24 @@ export async function createContext({
   }
 
   if (!user) {
+    const sessionCookie = (req.cookies as Record<string, string | undefined>)?.
+      session;
+    if (sessionCookie) {
+      try {
+        const { sub } = verifyJwt(sessionCookie);
+        const [found] = await db
+          .select()
+          .from(usersTable)
+          .where(eq(usersTable.id, sub))
+          .limit(1);
+        user = found ?? null;
+      } catch {
+        user = null;
+      }
+    }
+  }
+
+  if (!user) {
     const demoCookie = (req.cookies as Record<string, string | undefined>)?.[
       "chaiforms-demo-session"
     ];

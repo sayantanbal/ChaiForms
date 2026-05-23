@@ -15,6 +15,18 @@ import { signJwt } from "../../utils/jwt";
 
 const TAGS = ["Authentication"];
 const getPath = generatePath("/authentication");
+const SESSION_COOKIE_NAME = "session";
+const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function getSessionCookieOptions(isProd: boolean) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: isProd,
+    maxAge: SESSION_MAX_AGE_MS,
+    path: "/",
+  };
+}
 
 const userOutputSchema = z.object({
   id: z.uuid(),
@@ -36,7 +48,7 @@ function mapUser(user: typeof usersTable.$inferSelect) {
   };
 }
 
-export const authRouter = router({
+export const authRouter: ReturnType<typeof router> = router({
   getSupportedAuthenticationProviders: publicProcedure
     .meta({
       openapi: {
@@ -102,6 +114,118 @@ export const authRouter = router({
       return providers;
     }),
 
+  callback: publicProcedure
+    .meta({
+      openapi: { method: "GET", path: getPath("/callback"), tags: TAGS },
+    })
+    .input(
+      z.object({
+        code: z.string().min(1),
+      }),
+    )
+    .output(z.object({ user: userOutputSchema }))
+    .query(async ({ input, ctx }) => {
+      const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+      const redirectUri = process.env.GOOGLE_OAUTH_REDIRECT_URI;
+
+      if (!clientId || !clientSecret || !redirectUri) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Google OAuth is not configured",
+        });
+      }
+
+      const { OAuth2Client } = await import("google-auth-library");
+      const client = new OAuth2Client({
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirectUri,
+      });
+
+      let tokenResult: { tokens: { id_token?: string | null } };
+      try {
+        tokenResult = (await client.getToken(input.code)) as {
+          tokens: { id_token?: string | null };
+        };
+      } catch {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid or expired authorization code",
+        });
+      }
+      const idToken = tokenResult.tokens.id_token ?? undefined;
+      if (!idToken) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Google OAuth did not return an ID token",
+        });
+      }
+
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: clientId,
+      });
+
+      const payload = ticket.getPayload();
+      const email = payload?.email?.toLowerCase();
+      if (!email) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Google profile is missing an email address",
+        });
+      }
+
+      const fullName = payload?.name ?? email;
+      const profileImageUrl = payload?.picture ?? null;
+      const emailVerified = payload?.email_verified ?? false;
+
+      const [existing] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.email, email))
+        .limit(1);
+
+      const user = existing
+        ? (
+            await db
+              .update(usersTable)
+              .set({
+                fullName,
+                profileImageUrl,
+                emailVerified,
+                updatedAt: new Date(),
+              })
+              .where(eq(usersTable.id, existing.id))
+              .returning()
+          )[0]
+        : (
+            await db
+              .insert(usersTable)
+              .values({
+                email,
+                fullName,
+                profileImageUrl,
+                emailVerified,
+                role: email === "admin@chaiforms.dev" ? "admin" : "creator",
+              })
+              .returning()
+          )[0];
+
+      if (!user) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to persist user profile",
+        });
+      }
+
+      const token = signJwt(user.id);
+      const isProd = process.env.NODE_ENV === "production";
+      ctx.res.cookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions(isProd));
+
+      return { user: mapUser(user) };
+    }),
+
   me: protectedProcedure
     .meta({
       openapi: { method: "GET", path: getPath("/me"), tags: TAGS },
@@ -117,6 +241,8 @@ export const authRouter = router({
     .input(zodUndefinedModel)
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx }) => {
+      ctx.res.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
+      ctx.res.clearCookie("chaiforms-demo-session", { path: "/" });
       ctx.res.clearCookie("better-auth.session_token", { path: "/" });
       ctx.res.clearCookie("__Secure-better-auth.session_token", { path: "/" });
       return { success: true };
@@ -180,13 +306,7 @@ export const authRouter = router({
 
       const token = signJwt(user.id);
       const isProd = process.env.NODE_ENV === "production";
-      ctx.res.cookie("chaiforms-demo-session", token, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: isProd,
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: "/",
-      });
+      ctx.res.cookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions(isProd));
 
       return { user: mapUser(user) };
     }),
