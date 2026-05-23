@@ -51,41 +51,41 @@ All P0 phases → Phase 21 (Deployed demo)
 
 ### Phase 1: Monorepo & Package Infrastructure (P0)
 
-- [ ] 1. Create `packages/schemas` package
-  - [ ] 1.1 Scaffold `packages/schemas/package.json` with name `@repo/schemas`, add `zod` dependency, configure `exports` for `./fields`, `./form-settings`, `./response`, `./analytics`, and `.` (index)
-  - [ ] 1.2 Add `packages/schemas/tsconfig.json` extending `@repo/typescript-config/base.json`
-  - [ ] 1.3 Implement `packages/schemas/src/fields/short-text.ts` — `shortTextFieldSchema` with `baseField` + `type: "short_text"`, optional `minLength`, `maxLength`, `validationRegex`
-  - [ ] 1.4 Implement `packages/schemas/src/fields/long-text.ts` — `longTextFieldSchema`
-  - [ ] 1.5 Implement `packages/schemas/src/fields/email.ts` — `emailFieldSchema`
-  - [ ] 1.6 Implement `packages/schemas/src/fields/number.ts` — `numberFieldSchema` with optional `min`, `max`
-  - [ ] 1.7 Implement `packages/schemas/src/fields/single-select.ts` — `singleSelectFieldSchema` with `options` array (min 2)
-  - [ ] 1.8 Implement `packages/schemas/src/fields/multi-select.ts` — `multiSelectFieldSchema` with `options` array (min 2)
-  - [ ] 1.9 Implement `packages/schemas/src/fields/checkbox.ts` — `checkboxFieldSchema`
-  - [ ] 1.10 Implement `packages/schemas/src/fields/rating.ts` — `ratingFieldSchema` with `maxRating` int [2,10]
-  - [ ] 1.11 Implement `packages/schemas/src/fields/date.ts` — `dateFieldSchema` with optional `minDate`, `maxDate` ISO strings
-  - [ ] 1.12 Implement `packages/schemas/src/fields/index.ts` — export `FieldSchemaUnion` discriminated union, `FieldType`, and all individual schemas; include `conditionalRules` array on `baseField`
-  - [ ] 1.13 Implement `packages/schemas/src/form-settings.ts` — `formSettingsSchema`, `pageSchema`, `fieldsUpsertSchema`, `slugPattern`
-  - [ ] 1.14 Implement `packages/schemas/src/response.ts` — `answerSchema`, `submitResponseSchema`
-  - [ ] 1.15 Implement `packages/schemas/src/analytics.ts` — `analyticsSummarySchema`, `fieldBreakdownItemSchema`
-  - [ ] 1.16 Implement `packages/schemas/src/index.ts` — re-export all schemas
-  - [ ] 1.17 Add `@repo/schemas` as a workspace dependency in `packages/trpc/package.json`, `apps/web/package.json`, and `apps/api/package.json`
-  - [ ] 1.18 Write unit tests in `packages/schemas/src/__tests__/field-schema.test.ts` covering all 9 field types, boundary values, and invalid inputs
-  - [ ] 1.19 Write property-based test `packages/schemas/src/__tests__/field-schema.property.test.ts` — **Property 1: FieldSchemaUnion discriminated-union correctness** using `fast-check`; test `rating` rejects `maxRating` outside [2,10], `single_select`/`multi_select` reject fewer than 2 options, valid variants are accepted
+- [x] 1. Create `packages/schemas` package
+  - [x] 1.1 Scaffold `packages/schemas/package.json` with name `@repo/schemas`, add `zod` dependency, configure `exports` for `./fields`, `./form-settings`, `./response`, `./analytics`, and `.` (index)
+  - [x] 1.2 Add `packages/schemas/tsconfig.json` extending `@repo/typescript-config/base.json`
+  - [x] 1.3 Implement `packages/schemas/src/fields/short-text.ts` — `shortTextFieldSchema` with `baseField` + `type: "short_text"`, optional `minLength`, `maxLength`, `validationRegex`
+  - [x] 1.4 Implement `packages/schemas/src/fields/long-text.ts` — `longTextFieldSchema`
+  - [x] 1.5 Implement `packages/schemas/src/fields/email.ts` — `emailFieldSchema`
+  - [x] 1.6 Implement `packages/schemas/src/fields/number.ts` — `numberFieldSchema` with optional `min`, `max`
+  - [x] 1.7 Implement `packages/schemas/src/fields/single-select.ts` — `singleSelectFieldSchema` with `options` array (min 2)
+  - [x] 1.8 Implement `packages/schemas/src/fields/multi-select.ts` — `multiSelectFieldSchema` with `options` array (min 2)
+  - [x] 1.9 Implement `packages/schemas/src/fields/checkbox.ts` — `checkboxFieldSchema`
+  - [x] 1.10 Implement `packages/schemas/src/fields/rating.ts` — `ratingFieldSchema` with `maxRating` int [2,10]
+  - [x] 1.11 Implement `packages/schemas/src/fields/date.ts` — `dateFieldSchema` with optional `minDate`, `maxDate` ISO strings
+  - [x] 1.12 Implement `packages/schemas/src/fields/index.ts` — export `FieldSchemaUnion` discriminated union, `FieldType`, and all individual schemas; include `conditionalRules` array on `baseField`
+  - [x] 1.13 Implement `packages/schemas/src/form-settings.ts` — `formSettingsSchema`, `pageSchema`, `fieldsUpsertSchema`, `slugPattern`
+  - [x] 1.14 Implement `packages/schemas/src/response.ts` — `answerSchema`, `submitResponseSchema`
+  - [x] 1.15 Implement `packages/schemas/src/analytics.ts` — `analyticsSummarySchema`, `fieldBreakdownItemSchema`
+  - [x] 1.16 Implement `packages/schemas/src/index.ts` — re-export all schemas
+  - [x] 1.17 Add `@repo/schemas` as a workspace dependency in `packages/trpc/package.json`, `apps/web/package.json`, and `apps/api/package.json`
+  - [x] 1.18 Write unit tests in `packages/schemas/src/__tests__/field-schema.test.ts` covering all 9 field types, boundary values, and invalid inputs
+  - [x] 1.19 Write property-based test `packages/schemas/src/__tests__/field-schema.property.test.ts` — **Property 1: FieldSchemaUnion discriminated-union correctness** using `fast-check`; test `rating` rejects `maxRating` outside [2,10], `single_select`/`multi_select` reject fewer than 2 options, valid variants are accepted
 
 ---
 
 ### Phase 2: Database Schema & Migrations (P0)
 
-- [ ] 2. Extend database schema with ChaiForms tables
-  - [ ] 2.1 Extend `packages/database/models/user.ts` — add `userRoleEnum` (`creator`, `admin`), add `role` column (default `creator`), add `profileImageUrl` and `emailVerified` columns; update `SelectUser` / `InsertUser` types
-  - [ ] 2.2 Create `packages/database/models/form.ts` — define `formStatusEnum`, `formVisibilityEnum`, `formThemeEnum`, and `formsTable` with all columns per design; add indexes on `creatorId`, unique index on `slug`, composite index on `(status, visibility)`; export `SelectForm`, `InsertForm`
-  - [ ] 2.3 Create `packages/database/models/page.ts` — define `pagesTable` with `formId` FK, `title`, `order`, `fieldIds` uuid array; add index on `formId`; export `SelectPage`, `InsertPage`
-  - [ ] 2.4 Create `packages/database/models/response.ts` — define `responsesTable` with `formId` FK, `startedAt`, `submittedAt`, `respondentEmail`, `unlockToken`; add indexes on `formId` and `submittedAt`; export `SelectResponse`, `InsertResponse`
-  - [ ] 2.5 Create `packages/database/models/answer.ts` — define `answersTable` with `responseId` FK, `fieldId` uuid, `value` text; add indexes on `responseId` and `fieldId`; export `SelectAnswer`, `InsertAnswer`
-  - [ ] 2.6 Create `packages/database/models/template.ts` — define `templatesTable` with `title`, `description`, `theme`, `fields` JSONB typed as `FieldSchemaUnion[]`, `createdAt`; export `SelectTemplate`, `InsertTemplate`
-  - [ ] 2.7 Update `packages/database/schema.ts` to re-export all new models alongside the existing user model
-  - [ ] 2.8 Run `pnpm db:generate` to generate the Drizzle migration SQL for all new tables and enum types; commit the generated migration file under `packages/database/drizzle/`
-  - [ ] 2.9 Verify migration applies cleanly with `pnpm db:migrate` against a local PostgreSQL instance
+- [x] 2. Extend database schema with ChaiForms tables
+  - [x] 2.1 Extend `packages/database/models/user.ts` — add `userRoleEnum` (`creator`, `admin`), add `role` column (default `creator`), add `profileImageUrl` and `emailVerified` columns; update `SelectUser` / `InsertUser` types
+  - [x] 2.2 Create `packages/database/models/form.ts` — define `formStatusEnum`, `formVisibilityEnum`, `formThemeEnum`, and `formsTable` with all columns per design; add indexes on `creatorId`, unique index on `slug`, composite index on `(status, visibility)`; export `SelectForm`, `InsertForm`
+  - [x] 2.3 Create `packages/database/models/page.ts` — define `pagesTable` with `formId` FK, `title`, `order`, `fieldIds` uuid array; add index on `formId`; export `SelectPage`, `InsertPage`
+  - [x] 2.4 Create `packages/database/models/response.ts` — define `responsesTable` with `formId` FK, `startedAt`, `submittedAt`, `respondentEmail`, `unlockToken`; add indexes on `formId` and `submittedAt`; export `SelectResponse`, `InsertResponse`
+  - [x] 2.5 Create `packages/database/models/answer.ts` — define `answersTable` with `responseId` FK, `fieldId` uuid, `value` text; add indexes on `responseId` and `fieldId`; export `SelectAnswer`, `InsertAnswer`
+  - [x] 2.6 Create `packages/database/models/template.ts` — define `templatesTable` with `title`, `description`, `theme`, `fields` JSONB typed as `FieldSchemaUnion[]`, `createdAt`; export `SelectTemplate`, `InsertTemplate`
+  - [x] 2.7 Update `packages/database/schema.ts` to re-export all new models alongside the existing user model
+  - [x] 2.8 Run `pnpm db:generate` to generate the Drizzle migration SQL for all new tables and enum types; commit the generated migration file under `packages/database/drizzle/`
+  - [x] 2.9 Verify migration applies cleanly with `pnpm db:migrate` against a local PostgreSQL instance
 
 
 ---

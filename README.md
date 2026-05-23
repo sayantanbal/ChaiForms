@@ -1,135 +1,82 @@
-# Turborepo starter
+# ChaiForms
 
-This Turborepo starter is maintained by the Turborepo core team.
+ChaiForms is a Typeform-style form builder SaaS built on a Turborepo monorepo. Creators authenticate with Google OAuth, build themed forms with drag-and-drop, publish shareable links, and view analytics. Respondents submit forms without an account.
 
-## Using this example
+## Monorepo structure
 
-Run the following command:
+| Path | Purpose |
+| --- | --- |
+| `apps/web` | Next.js 16 frontend (ChaiForms_Web) |
+| `apps/api` | Express + tRPC API server (ChaiForms_Server) |
+| `packages/schemas` | Shared Zod schemas (`FieldSchemaUnion`, form settings, responses) |
+| `packages/trpc` | tRPC routers and server/client exports |
+| `packages/database` | Drizzle ORM schema and migrations |
+| `packages/services` | Google OAuth, user services |
+| `packages/logger` | Winston logging |
+
+## Local development
 
 ```sh
-npx create-turbo@latest
+pnpm install
+cp .env.example .env   # DATABASE_URL can be Neon or local Postgres (see docs/documentation.md)
+pnpm db:migrate        # applies migrations to DATABASE_URL
+pnpm db:seed           # available after Phase 15
+pnpm dev
 ```
 
-## What's inside?
+- Web: http://localhost:3000
+- API: http://localhost:3001 (default)
+- API docs (Scalar): http://localhost:3001/docs
 
-This Turborepo includes the following packages/apps:
+## Scripts
 
-### Apps and Packages
+| Command | Description |
+| --- | --- |
+| `pnpm dev` | Start web + API in development |
+| `pnpm build` | Build all apps and packages |
+| `pnpm test` | Run Vitest tests across packages |
+| `pnpm db:migrate` | Apply Drizzle migrations |
+| `pnpm db:generate` | Generate migration SQL after schema changes |
+| `pnpm check-types` | TypeScript check |
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+## Implementation status
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+See [docs/documentation.md](./docs/documentation.md) for detailed architecture, schemas, and phase-by-phase progress.
 
-### Utilities
+| Phase | Status | Description |
+| --- | --- | --- |
+| 1 — Schemas | ✅ Complete | `@repo/schemas` package with field union + tests |
+| 2 — Database | ✅ Complete | Forms, responses, answers, templates + migration `0001` |
+| 3 — Auth | 🔲 Pending | JWT, cookies, demo login |
+| 4+ | 🔲 Pending | Routers, UI, seed, deploy |
 
-This Turborepo has some additional tools already setup for you:
+## Demo credentials
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+Documented in full after Phase 3 and Phase 15 (seed script):
 
-### Build
+- Creator: `demo@chaiforms.dev`
+- Admin: `admin@chaiforms.dev`
+- Password-protected demo form: `demo1234`
 
-To build all apps and packages, run the following command:
+## Deployment (planned)
 
-```
-cd my-turborepo
+| Component | Platform |
+| --- | --- |
+| ChaiForms_Web (`apps/web`) | [Vercel](https://vercel.com) |
+| ChaiForms_Server (`apps/api`) | [Google Cloud Run](https://cloud.google.com/run) |
+| PostgreSQL | Neon (or managed Postgres on GCP) |
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
+Cross-origin auth requires `WEB_ORIGIN` on the API (Vercel URL) and `credentials: "include"` on the web tRPC client.
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
-```
+## Submission artifacts
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+Fill in after deployment (Phase 21):
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+- GitHub repository: _(TBD)_
+- Deployed web app (Vercel): _(TBD)_
+- API base URL (Cloud Run): _(TBD)_
+- Scalar API docs: `{API_BASE_URL}/docs`
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+## Specs
 
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+Product requirements and implementation tasks live in `.kiro/specs/form-builder-saas/`.

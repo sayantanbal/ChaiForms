@@ -21,6 +21,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@repo/schemas": "workspace:*",
     "@repo/trpc": "workspace:*",
     "@repo/logger": "workspace:*",
     "@scalar/express-api-reference": "^0.8.30",

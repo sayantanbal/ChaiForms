@@ -1,0 +1,47 @@
+import { z } from "zod";
+import { FieldSchemaUnion } from "./fields/index.js";
+
+export const slugPattern = /^[a-z0-9-]{3,60}$/;
+
+export const pageSchema = z.object({
+  id: z.uuid(),
+  title: z.string().min(1),
+  order: z.number().int().min(0),
+  fieldIds: z.array(z.uuid()),
+});
+
+export const formSettingsSchema = z.object({
+  title: z.string().min(1).max(255).optional(),
+  description: z.string().max(2000).optional(),
+  slug: z.string().regex(slugPattern).optional(),
+  status: z.enum(["draft", "published", "archived"]).optional(),
+  visibility: z.enum(["public", "unlisted"]).optional(),
+  theme: z
+    .enum([
+      "default",
+      "anime",
+      "movie",
+      "game",
+      "startup",
+      "tech_company",
+      "os",
+      "event",
+    ])
+    .optional(),
+  thankyouMessage: z.string().max(1000).optional(),
+  expiryDate: z.iso.datetime().nullable().optional(),
+  responseLimit: z.number().int().min(1).nullable().optional(),
+  accessPassword: z.string().min(4).nullable().optional(),
+  sendRespondentConfirmation: z.boolean().optional(),
+  pages: z.array(pageSchema).optional(),
+});
+
+export const fieldsUpsertSchema = z.object({
+  formId: z.uuid(),
+  fields: z.array(FieldSchemaUnion),
+  pages: z.array(pageSchema).optional(),
+});
+
+export type PageSchema = z.infer<typeof pageSchema>;
+export type FormSettingsSchema = z.infer<typeof formSettingsSchema>;
+export type FieldsUpsertSchema = z.infer<typeof fieldsUpsertSchema>;

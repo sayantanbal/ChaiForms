@@ -5,7 +5,10 @@ import {
   timestamp,
   boolean,
   text,
+  pgEnum,
 } from "drizzle-orm/pg-core";
+
+export const userRoleEnum = pgEnum("user_role", ["creator", "admin"]);
 
 export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -16,6 +19,8 @@ export const usersTable = pgTable("users", {
   emailVerified: boolean("email_verified").default(false),
 
   profileImageUrl: text("profile_image_url"),
+
+  role: userRoleEnum("role").default("creator").notNull(),
 
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
