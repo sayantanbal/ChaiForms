@@ -69,19 +69,23 @@ export function assertCsrf(req: {
   headers: Record<string, string | string[] | undefined>;
   cookies?: Record<string, string | undefined>;
   method?: string;
+  csrfToken?: string;
 }): void {
   const method = (req.method ?? "GET").toUpperCase();
-  if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
+  const isSafeMethod =
+    method === "GET" || method === "HEAD" || method === "OPTIONS";
+  if (isSafeMethod && !req.csrfToken) {
     return;
   }
 
   const headerToken = req.headers[CSRF_HEADER_NAME];
   const token =
-    typeof headerToken === "string"
+    req.csrfToken ??
+    (typeof headerToken === "string"
       ? headerToken
       : Array.isArray(headerToken)
         ? headerToken[0]
-        : undefined;
+        : undefined);
 
   if (!token || !isValidCsrfToken(token)) {
     throw new TRPCError({

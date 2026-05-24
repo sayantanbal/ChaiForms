@@ -31,6 +31,10 @@ vi.mock("../utils/jwt", () => ({
   verifyUnlockToken: vi.fn(() => false),
 }));
 
+vi.mock("../utils/analytics-broadcast", () => ({
+  broadcastDelta: vi.fn(),
+}));
+
 vi.mock("@repo/services/notification", () => ({
   notificationService: {
     sendSubmissionEmails: vi.fn(),
@@ -48,6 +52,7 @@ vi.mock("@repo/database", () => ({
   desc: vi.fn(),
   gte: vi.fn(),
   lte: vi.fn(),
+  isNull: vi.fn(),
 }));
 
 vi.mock("@repo/database/schema", () => ({
@@ -56,6 +61,7 @@ vi.mock("@repo/database/schema", () => ({
     status: "status",
     formId: "formId",
     creatorId: "creatorId",
+    deletedAt: "deletedAt",
   },
   responsesTable: {
     id: "id",
@@ -111,6 +117,7 @@ const baseForm = {
   expiryDate: null as Date | null,
   responseLimit: null as number | null,
   accessPasswordHash: null as string | null,
+  deletedAt: null as Date | null,
   fields: [
     {
       id: "b1a1a2f5-1e76-4013-aad1-4c6bb78ddf7f",

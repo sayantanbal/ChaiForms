@@ -1,7 +1,12 @@
 import { Resend } from "resend";
 import { logger } from "@repo/logger";
 
-import { creatorEmailHtml, respondentEmailHtml } from "./templates";
+import {
+  creatorEmailHtml,
+  respondentEmailHtml,
+  workspaceInviteEmailHtml,
+  type WorkspaceInviteTemplateOpts,
+} from "./templates";
 
 export interface SendSubmissionEmailsOpts {
   creatorEmail: string;
@@ -76,6 +81,29 @@ export class NotificationService {
     }
 
     void Promise.allSettled(tasks);
+  }
+
+  sendWorkspaceInviteEmail(opts: WorkspaceInviteTemplateOpts): void {
+    if (!this.resend) {
+      logger.warn("RESEND_API_KEY not set; skipping workspace invite email", {
+        workspaceId: opts.workspaceId,
+      });
+      return;
+    }
+
+    void this.resend.emails
+      .send({
+        from: "ChaiForms <notifications@chaiforms.dev>",
+        to: opts.inviteeEmail,
+        subject: `You've been invited to ${opts.workspaceName}`,
+        html: workspaceInviteEmailHtml(opts),
+      })
+      .catch((err: Error) => {
+        logger.error("Workspace invite email failed", {
+          workspaceId: opts.workspaceId,
+          error: err.message,
+        });
+      });
   }
 }
 

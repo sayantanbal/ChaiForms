@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { db, eq, and, count, desc, gte, lte } from "@repo/database";
+import { db, eq, and, count, desc, gte, lte, isNull } from "@repo/database";
 import {
   formsTable,
   responsesTable,
@@ -18,6 +18,7 @@ import {
 } from "../../utils/client-context";
 import { assertSubmitRateLimit } from "../../utils/submit-rate-limit";
 import { verifyUnlockToken } from "../../utils/jwt";
+import { broadcastDelta } from "../../utils/analytics-broadcast";
 
 const TAGS = ["Responses"];
 const getPath = generatePath("/responses");
@@ -229,7 +230,9 @@ export const responsesRouter = router({
       const [form] = await db
         .select()
         .from(formsTable)
-        .where(eq(formsTable.id, input.formId))
+        .where(
+          and(eq(formsTable.id, input.formId), isNull(formsTable.deletedAt)),
+        )
         .limit(1);
 
       if (!form) {
@@ -359,6 +362,11 @@ export const responsesRouter = router({
           webBaseUrl,
         });
       }
+
+      broadcastDelta(form.id, {
+        responseId: response.id,
+        submittedAt: new Date().toISOString(),
+      });
 
       return { success: true, responseId: response.id };
     }),

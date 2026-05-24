@@ -50,8 +50,13 @@ export default function FormsListPage() {
     onError: (e) => toast.error(e.message),
   });
 
-  const deleteMutation = trpc.forms.delete.useMutation({
+  const archiveMutation = trpc.forms.archive.useMutation({
     onSuccess: () => { toast.success("Form archived"); void refetch(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const softDeleteMutation = trpc.forms.softDelete.useMutation({
+    onSuccess: () => { toast.success("Form moved to trash"); void refetch(); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -204,15 +209,34 @@ export default function FormsListPage() {
                     Clone
                   </button>
                   {form.status !== "archived" && (
-                    <button
-                      onClick={() => {
-                        if (confirm("Archive this form?")) deleteMutation.mutate({ formId: form.id });
-                      }}
-                      disabled={deleteMutation.isPending}
-                      className="text-xs px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg transition-all disabled:opacity-50"
-                    >
-                      Archive
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          if (confirm("Archive this form?")) {
+                            archiveMutation.mutate({ formId: form.id });
+                          }
+                        }}
+                        disabled={archiveMutation.isPending}
+                        className="text-xs px-3 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/20 rounded-lg transition-all disabled:opacity-50"
+                      >
+                        Archive
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (
+                            confirm(
+                              "Move this form to trash? You can recover it within 7 days.",
+                            )
+                          ) {
+                            softDeleteMutation.mutate({ formIds: [form.id] });
+                          }
+                        }}
+                        disabled={softDeleteMutation.isPending}
+                        className="text-xs px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg transition-all disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
+                    </>
                   )}
                 </div>
               </div>

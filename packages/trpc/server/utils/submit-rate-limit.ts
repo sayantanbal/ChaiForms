@@ -1,13 +1,14 @@
 import { TRPCError } from "@trpc/server";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
 
+import {
+  assertRateLimit,
+  getSubmitRatelimit,
+  resetInMemoryRateLimits,
+} from "./rate-limiter";
+
+const inMemorySubmitBuckets = new Map<string, { count: number; resetAt: number }>();
 const WINDOW_MS = 60_000;
 const MAX_REQUESTS = 10;
-
-let submitRatelimit: Ratelimit | null = null;
-
-const inMemoryBuckets = new Map<string, { count: number; resetAt: number }>();
 
 function hasUpstashConfig(): boolean {
   return Boolean(
@@ -15,31 +16,12 @@ function hasUpstashConfig(): boolean {
   );
 }
 
-function getSubmitRatelimit(): Ratelimit {
-  if (!submitRatelimit) {
-    const url = process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-    if (!url || !token) {
-      throw new Error(
-        "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required for rate limiting",
-      );
-    }
-    submitRatelimit = new Ratelimit({
-      redis: new Redis({ url, token }),
-      limiter: Ratelimit.slidingWindow(MAX_REQUESTS, "60 s"),
-      prefix: "chaiforms:responses:submit",
-      analytics: true,
-    });
-  }
-  return submitRatelimit;
-}
-
-function assertInMemoryRateLimit(identifier: string): void {
+function assertInMemorySubmitRateLimit(identifier: string): void {
   const now = Date.now();
-  const bucket = inMemoryBuckets.get(identifier);
+  const bucket = inMemorySubmitBuckets.get(identifier);
 
   if (!bucket || now >= bucket.resetAt) {
-    inMemoryBuckets.set(identifier, {
+    inMemorySubmitBuckets.set(identifier, {
       count: 1,
       resetAt: now + WINDOW_MS,
     });
@@ -66,25 +48,28 @@ function assertInMemoryRateLimit(identifier: string): void {
  */
 export async function assertSubmitRateLimit(identifier: string): Promise<void> {
   if (!hasUpstashConfig()) {
-    assertInMemoryRateLimit(identifier);
+    assertInMemorySubmitRateLimit(identifier);
     return;
   }
 
-  const { success, reset } = await getSubmitRatelimit().limit(identifier);
-
-  if (!success) {
-    const retryAfterSeconds = Math.max(
-      1,
-      Math.ceil((reset - Date.now()) / 1000),
-    );
-    throw new TRPCError({
-      code: "TOO_MANY_REQUESTS",
-      message: `Too many submissions. Retry after ${retryAfterSeconds} seconds.`,
-    });
+  try {
+    await assertRateLimit(getSubmitRatelimit(), identifier);
+  } catch (err) {
+    if (err instanceof TRPCError && err.code === "TOO_MANY_REQUESTS") {
+      throw new TRPCError({
+        code: "TOO_MANY_REQUESTS",
+        message: err.message.replace(
+          "Rate limit exceeded",
+          "Too many submissions",
+        ),
+      });
+    }
+    throw err;
   }
 }
 
 /** @internal Reset in-memory buckets between tests. */
 export function resetInMemorySubmitRateLimit(): void {
-  inMemoryBuckets.clear();
+  inMemorySubmitBuckets.clear();
+  resetInMemoryRateLimits();
 }

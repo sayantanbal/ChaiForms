@@ -23,6 +23,8 @@ import {
   answersTable,
   templatesTable,
   pagesTable,
+  workspacesTable,
+  workspaceMembersTable,
 } from "./schema";
 
 // ---------------------------------------------------------------------------
@@ -274,6 +276,60 @@ async function seed() {
     console.log("  ✓ Admin user exists:", adminUser.id);
   }
 
+  // ---- 1b. Demo workspace --------------------------------------------------
+  console.log("Creating demo workspace...");
+
+  let demoWorkspace = await db
+    .select()
+    .from(workspacesTable)
+    .where(eq(workspacesTable.name, "Demo Workspace"))
+    .limit(1)
+    .then((r) => r[0]);
+
+  if (!demoWorkspace) {
+    const [created] = await db
+      .insert(workspacesTable)
+      .values({
+        name: "Demo Workspace",
+        description: "Shared workspace for demo collaboration and judge testing.",
+        ownerId: demoUser.id,
+      })
+      .returning();
+    demoWorkspace = created!;
+    console.log("  ✓ Created demo workspace:", demoWorkspace.id);
+  } else {
+    console.log("  ✓ Demo workspace exists:", demoWorkspace.id);
+  }
+
+  const ensureMember = async (
+    userId: string,
+    role: "admin" | "creator" | "viewer",
+  ) => {
+    const existing = await db
+      .select()
+      .from(workspaceMembersTable)
+      .where(
+        and(
+          eq(workspaceMembersTable.workspaceId, demoWorkspace!.id),
+          eq(workspaceMembersTable.userId, userId),
+        ),
+      )
+      .limit(1)
+      .then((r) => r[0]);
+
+    if (!existing) {
+      await db.insert(workspaceMembersTable).values({
+        workspaceId: demoWorkspace!.id,
+        userId,
+        role,
+        acceptedAt: new Date(),
+      });
+    }
+  };
+
+  await ensureMember(demoUser.id, "admin");
+  await ensureMember(adminUser.id, "creator");
+
   // ---- 2. Templates --------------------------------------------------------
   console.log("Creating templates...");
 
@@ -444,6 +500,41 @@ async function seed() {
     }
   }
 
+  // Workspace-scoped form (requires auth for judges)
+  const workspaceFormSlug = "demo-workspace-judge-form";
+  let workspaceForm = await db
+    .select()
+    .from(formsTable)
+    .where(eq(formsTable.slug, workspaceFormSlug))
+    .limit(1)
+    .then((r) => r[0]);
+
+  if (!workspaceForm) {
+    const [created] = await db
+      .insert(formsTable)
+      .values({
+        creatorId: demoUser.id,
+        workspaceId: demoWorkspace.id,
+        scope: "workspace",
+        requiresAuth: true,
+        title: "Demo Workspace Judge Form",
+        description: "Workspace-only form; sign in as a workspace member to submit.",
+        slug: workspaceFormSlug,
+        status: "published",
+        visibility: "unlisted",
+        theme: "startup",
+        fields: startupFormFields as any,
+        sendRespondentConfirmation: false,
+      })
+      .returning();
+    workspaceForm = created!;
+    seededForms.push(workspaceForm);
+    console.log("  ✓ Created workspace-scoped form:", workspaceForm.title);
+  } else {
+    seededForms.push(workspaceForm);
+    console.log("  ✓ Workspace form exists:", workspaceForm.title);
+  }
+
   // ---- 4. Seed responses ---------------------------------------------------
   console.log("Seeding responses (20+ per form)...");
 
@@ -549,6 +640,7 @@ async function seed() {
   console.log("  Admin:   admin@chaiforms.dev (use demoLogin bypass)");
   console.log("  Password-protected form slug: startup-idea-validator");
   console.log("  Form password: demo1234");
+  console.log("  Workspace form slug: demo-workspace-judge-form (requires auth + membership)");
   process.exit(0);
 }
 

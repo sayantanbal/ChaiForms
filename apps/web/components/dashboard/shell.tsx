@@ -8,6 +8,9 @@ import { toast } from "sonner";
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Overview", icon: "📊", exact: true },
   { href: "/dashboard/forms", label: "My Forms", icon: "📝" },
+  { href: "/dashboard/forms/archive", label: "Archive", icon: "📦" },
+  { href: "/dashboard/forms/trash", label: "Trash", icon: "🗑️" },
+  { href: "/dashboard/workspaces", label: "Workspaces", icon: "👥" },
 ];
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -39,7 +42,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           {NAV_ITEMS.map((item) => {
             const active = item.exact
               ? pathname === item.href
-              : pathname.startsWith(item.href);
+              : item.href === "/dashboard/forms"
+                ? pathname === "/dashboard/forms" ||
+                  (pathname.startsWith("/dashboard/forms/") &&
+                    !pathname.startsWith("/dashboard/forms/archive") &&
+                    !pathname.startsWith("/dashboard/forms/trash"))
+                : pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}

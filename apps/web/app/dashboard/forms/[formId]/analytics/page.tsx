@@ -1,11 +1,15 @@
 "use client";
 
+import { useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "~/trpc/client";
+import { useAnalyticsWs } from "@/hooks/use-analytics-ws";
 
 export default function AnalyticsPage() {
   const { formId } = useParams<{ formId: string }>();
+  const utils = trpc.useUtils();
+  const { delta, reconnecting } = useAnalyticsWs(formId);
 
   const { data: form } = trpc.forms.getById.useQuery({ formId });
   const { data: summary, isLoading: summaryLoading } = trpc.analytics.getSummary.useQuery({ formId });
@@ -14,6 +18,13 @@ export default function AnalyticsPage() {
     formId,
     granularity: "day",
   });
+
+  useEffect(() => {
+    if (!delta) return;
+    void utils.analytics.getSummary.invalidate({ formId });
+    void utils.analytics.getFieldBreakdown.invalidate({ formId });
+    void utils.analytics.getResponsesOverTime.invalidate({ formId, granularity: "day" });
+  }, [delta, formId, utils]);
 
   const maxCount = overTime ? Math.max(...overTime.map((d) => d.count), 1) : 1;
 
@@ -26,6 +37,9 @@ export default function AnalyticsPage() {
         </Link>
         <span className="text-gray-600">/</span>
         <h1 className="text-xl font-bold">{form?.title ?? "..."} — Analytics</h1>
+        {reconnecting && (
+          <span className="text-xs text-amber-400 ml-auto">Reconnecting…</span>
+        )}
       </div>
 
       {/* Summary cards */}

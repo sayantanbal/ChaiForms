@@ -12,12 +12,23 @@ function getJwtSecret(): string {
   return secret;
 }
 
-export function signAccessJwt(userId: string): string {
-  return jwt.sign({ sub: userId }, getJwtSecret(), { expiresIn: ACCESS_EXPIRY });
+export function signAccessJwt(
+  userId: string,
+  role: "creator" | "admin" = "creator",
+): string {
+  return jwt.sign({ sub: userId, role }, getJwtSecret(), {
+    expiresIn: ACCESS_EXPIRY,
+  });
 }
 
-export function verifyAccessJwt(token: string): { sub: string } {
-  return jwt.verify(token, getJwtSecret()) as { sub: string };
+export function verifyAccessJwt(token: string): {
+  sub: string;
+  role?: "creator" | "admin";
+} {
+  return jwt.verify(token, getJwtSecret()) as {
+    sub: string;
+    role?: "creator" | "admin";
+  };
 }
 
 export function signRefreshJwt(userId: string, family: string): string {

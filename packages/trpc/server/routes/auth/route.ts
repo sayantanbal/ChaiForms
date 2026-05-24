@@ -259,7 +259,7 @@ export const authRouter: ReturnType<typeof router> = router({
         expiresAt,
       });
 
-      const accessJwt = signAccessJwt(user.id);
+      const accessJwt = signAccessJwt(user.id, user.role);
       const refreshJwt = signRefreshJwt(user.id, familyId);
       const csrf = createCsrfToken();
       const isProd = process.env.NODE_ENV === "production";
@@ -350,7 +350,7 @@ export const authRouter: ReturnType<typeof router> = router({
         throw new TRPCError({ code: "UNAUTHORIZED" });
       }
 
-      const accessJwt = signAccessJwt(user.id);
+      const accessJwt = signAccessJwt(user.id, user.role);
       const newRefreshJwt = signRefreshJwt(user.id, newFamily);
       const csrf = createCsrfToken();
       const isProd = process.env.NODE_ENV === "production";
@@ -467,7 +467,7 @@ export const authRouter: ReturnType<typeof router> = router({
         expiresAt,
       });
 
-      const accessJwt = signAccessJwt(user.id);
+      const accessJwt = signAccessJwt(user.id, user.role);
       const refreshJwt = signRefreshJwt(user.id, familyId);
       const csrf = createCsrfToken();
       const isProd = process.env.NODE_ENV === "production";

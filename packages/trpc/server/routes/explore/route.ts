@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db, eq, and, count, desc } from "@repo/database";
+import { db, eq, and, count, desc, isNull } from "@repo/database";
 import { formsTable, templatesTable } from "@repo/database/schema";
 import type { FieldSchemaUnion } from "@repo/schemas";
 
@@ -13,7 +13,7 @@ const TAGS_TEMPLATES = ["Explore", "Templates"];
 const getPath = generatePath("/explore");
 
 const publicFormCardSchema = formOutputSchema
-  .omit({ creatorId: true })
+  .omit({ creatorId: true, deletedAt: true })
   .extend({ responseCount: z.number().int() });
 
 const paginatedPublicFormsSchema = z.object({
@@ -73,6 +73,7 @@ export const exploreRouter = router({
             and(
               eq(formsTable.status, "published"),
               eq(formsTable.visibility, "public"),
+              isNull(formsTable.deletedAt),
             ),
           ),
         db
@@ -82,6 +83,7 @@ export const exploreRouter = router({
             and(
               eq(formsTable.status, "published"),
               eq(formsTable.visibility, "public"),
+              isNull(formsTable.deletedAt),
             ),
           )
           .orderBy(desc(formsTable.createdAt))
@@ -104,6 +106,9 @@ export const exploreRouter = router({
           responseLimit: form.responseLimit,
           hasPassword: !!form.accessPasswordHash,
           sendRespondentConfirmation: form.sendRespondentConfirmation,
+          scope: form.scope ?? "global",
+          workspaceId: form.workspaceId ?? null,
+          requiresAuth: form.requiresAuth ?? false,
           createdAt: form.createdAt ? form.createdAt.toISOString() : null,
           updatedAt: form.updatedAt ? form.updatedAt.toISOString() : null,
           responseCount: 0, // Will be enhanced with join later
@@ -136,6 +141,7 @@ export const exploreRouter = router({
           and(
             eq(formsTable.status, "published"),
             eq(formsTable.visibility, "public"),
+            isNull(formsTable.deletedAt),
           ),
         )
         .orderBy(desc(formsTable.createdAt))
@@ -155,6 +161,9 @@ export const exploreRouter = router({
         responseLimit: form.responseLimit,
         hasPassword: !!form.accessPasswordHash,
         sendRespondentConfirmation: form.sendRespondentConfirmation,
+        scope: form.scope ?? "global",
+        workspaceId: form.workspaceId ?? null,
+        requiresAuth: form.requiresAuth ?? false,
         createdAt: form.createdAt ? form.createdAt.toISOString() : null,
         updatedAt: form.updatedAt ? form.updatedAt.toISOString() : null,
         responseCount: 0,

@@ -134,6 +134,7 @@ describe("admin router", () => {
             email: "creator@chaiforms.dev",
             fullName: "Creator",
             role: "creator",
+            isBlocked: false,
             createdAt: new Date("2024-01-01T00:00:00.000Z"),
           },
         ]),

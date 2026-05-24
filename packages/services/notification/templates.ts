@@ -45,6 +45,34 @@ export function respondentEmailHtml(opts: EmailTemplateOpts): string {
   `.trim();
 }
 
+export interface WorkspaceInviteTemplateOpts {
+  inviteeEmail: string;
+  workspaceName: string;
+  inviterName: string;
+  workspaceId: string;
+  webBaseUrl: string;
+}
+
+export function workspaceInviteEmailHtml(
+  opts: WorkspaceInviteTemplateOpts,
+): string {
+  const workspaceUrl = `${opts.webBaseUrl.replace(/\/$/, "")}/dashboard/workspaces/${opts.workspaceId}`;
+
+  return `
+    <div style="font-family: system-ui, sans-serif; max-width: 560px; margin: 0 auto; color: #1e293b;">
+      <h1 style="font-size: 20px; margin-bottom: 8px;">You've been invited to ${escapeHtml(opts.workspaceName)}</h1>
+      <p style="color: #64748b; margin-top: 0;">
+        ${escapeHtml(opts.inviterName)} added you to the workspace on ChaiForms.
+      </p>
+      <p>
+        <a href="${workspaceUrl}" style="display: inline-block; background: #ea580c; color: #fff; padding: 10px 16px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+          Open workspace
+        </a>
+      </p>
+    </div>
+  `.trim();
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")

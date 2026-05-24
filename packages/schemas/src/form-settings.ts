@@ -33,6 +33,9 @@ export const formSettingsSchema = z.object({
   responseLimit: z.number().int().min(1).nullable().optional(),
   accessPassword: z.string().min(4).nullable().optional(),
   sendRespondentConfirmation: z.boolean().optional(),
+  scope: z.enum(["global", "workspace"]).optional(),
+  workspaceId: z.uuid().nullable().optional(),
+  requiresAuth: z.boolean().optional(),
   pages: z.array(pageSchema).optional(),
 });
 

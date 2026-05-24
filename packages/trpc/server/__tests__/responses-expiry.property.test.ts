@@ -41,11 +41,13 @@ vi.mock("@repo/database", () => ({
   desc: vi.fn(),
   gte: vi.fn(),
   lte: vi.fn(),
+  isNull: vi.fn(),
 }));
 
 vi.mock("@repo/database/schema", () => ({
   formsTable: {
     id: "id",
+    deletedAt: "deletedAt",
   },
   responsesTable: {
     id: "id",

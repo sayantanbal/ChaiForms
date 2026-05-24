@@ -30,6 +30,10 @@ vi.mock("../utils/jwt", () => ({
   verifyUnlockToken: vi.fn(() => true),
 }));
 
+vi.mock("../utils/analytics-broadcast", () => ({
+  broadcastDelta: vi.fn(),
+}));
+
 vi.mock("@repo/database", () => ({
   db: {
     select: vi.fn(),
@@ -41,11 +45,13 @@ vi.mock("@repo/database", () => ({
   desc: vi.fn(),
   gte: vi.fn(),
   lte: vi.fn(),
+  isNull: vi.fn(),
 }));
 
 vi.mock("@repo/database/schema", () => ({
   formsTable: {
     id: "id",
+    deletedAt: "deletedAt",
   },
   responsesTable: {
     id: "id",

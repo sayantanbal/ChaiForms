@@ -1,11 +1,24 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { db, eq, and, count, desc } from "@repo/database";
+import {
+  db,
+  eq,
+  and,
+  count,
+  desc,
+  isNull,
+  isNotNull,
+  inArray,
+  gte,
+  not,
+} from "@repo/database";
 import {
   formsTable,
   pagesTable,
   responsesTable,
   templatesTable,
+  workspaceMembersTable,
+  workspacesTable,
 } from "@repo/database/schema";
 import {
   formSettingsSchema,
@@ -25,6 +38,12 @@ const TAGS_FIELDS = ["Forms", "Fields"];
 const TAGS_SHARING = ["Forms", "Sharing"];
 const TAGS_TEMPLATES = ["Forms", "Templates"];
 const getPath = generatePath("/forms");
+
+const RECOVERY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+function trashRecoveryCutoff(): Date {
+  return new Date(Date.now() - RECOVERY_WINDOW_MS);
+}
 
 // ---------------------------------------------------------------------------
 // Output schemas
@@ -53,12 +72,17 @@ export const formOutputSchema = z.object({
   responseLimit: z.number().int().nullable(),
   hasPassword: z.boolean(),
   sendRespondentConfirmation: z.boolean(),
+  scope: z.enum(["global", "workspace"]),
+  workspaceId: z.string().uuid().nullable(),
+  requiresAuth: z.boolean(),
+  deletedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime().nullable(),
   updatedAt: z.string().datetime().nullable(),
 });
 
 export const publicFormOutputSchema = formOutputSchema.omit({
   creatorId: true,
+  deletedAt: true,
 });
 
 const paginatedFormsSchema = z.object({
@@ -94,6 +118,10 @@ function mapForm(form: typeof formsTable.$inferSelect) {
     responseLimit: form.responseLimit,
     hasPassword: !!form.accessPasswordHash,
     sendRespondentConfirmation: form.sendRespondentConfirmation,
+    scope: form.scope ?? "global",
+    workspaceId: form.workspaceId ?? null,
+    requiresAuth: form.requiresAuth ?? false,
+    deletedAt: form.deletedAt ? form.deletedAt.toISOString() : null,
     createdAt: form.createdAt ? form.createdAt.toISOString() : null,
     updatedAt: form.updatedAt ? form.updatedAt.toISOString() : null,
   };
@@ -185,15 +213,21 @@ export const formsRouter = router({
     .query(async ({ input, ctx }) => {
       const offset = (input.page - 1) * input.pageSize;
 
+      const activeFormsFilter = and(
+        eq(formsTable.creatorId, ctx.user.id),
+        isNull(formsTable.deletedAt),
+        not(eq(formsTable.status, "archived")),
+      );
+
       const [totalResult, items] = await Promise.all([
         db
           .select({ count: count() })
           .from(formsTable)
-          .where(eq(formsTable.creatorId, ctx.user.id)),
+          .where(activeFormsFilter),
         db
           .select()
           .from(formsTable)
-          .where(eq(formsTable.creatorId, ctx.user.id))
+          .where(activeFormsFilter)
           .orderBy(desc(formsTable.updatedAt))
           .limit(input.pageSize)
           .offset(offset),
@@ -238,7 +272,9 @@ export const formsRouter = router({
       const [form] = await db
         .select()
         .from(formsTable)
-        .where(eq(formsTable.slug, input.slug))
+        .where(
+          and(eq(formsTable.slug, input.slug), isNull(formsTable.deletedAt)),
+        )
         .limit(1);
 
       if (!form) {
@@ -310,6 +346,11 @@ export const formsRouter = router({
       if (settings.sendRespondentConfirmation !== undefined)
         updateData.sendRespondentConfirmation =
           settings.sendRespondentConfirmation;
+      if (settings.scope !== undefined) updateData.scope = settings.scope;
+      if (settings.workspaceId !== undefined)
+        updateData.workspaceId = settings.workspaceId;
+      if (settings.requiresAuth !== undefined)
+        updateData.requiresAuth = settings.requiresAuth;
       if (settings.accessPassword !== undefined)
         updateData.accessPasswordHash = accessPasswordHash;
 
@@ -334,13 +375,78 @@ export const formsRouter = router({
         tags: TAGS_FORMS,
       },
     })
-    .input(z.object({ formId: z.string().uuid() }))
+    .input(
+      z.object({
+        formId: z.string().uuid(),
+        scope: z.enum(["global", "workspace"]).optional(),
+        workspaceId: z.string().uuid().nullable().optional(),
+        requiresAuth: z.boolean().optional(),
+      }),
+    )
     .output(formOutputSchema)
     .mutation(async ({ input, ctx }) => {
-      await assertOwnership(input.formId, ctx.user.id);
+      const existing = await assertOwnership(input.formId, ctx.user.id);
+
+      const updateData: Partial<typeof formsTable.$inferInsert> = {
+        status: "published",
+      };
+
+      if (input.scope !== undefined) {
+        updateData.scope = input.scope;
+        if (input.scope === "global") {
+          updateData.workspaceId = null;
+        }
+      }
+
+      if (input.workspaceId !== undefined) {
+        updateData.workspaceId = input.workspaceId;
+        if (input.workspaceId) {
+          updateData.scope = "workspace";
+        }
+      }
+
+      if (input.requiresAuth !== undefined) {
+        updateData.requiresAuth = input.requiresAuth;
+      }
+
+      if (
+        (updateData.scope ?? existing.scope) === "workspace" &&
+        (updateData.workspaceId ?? existing.workspaceId)
+      ) {
+        const workspaceId = updateData.workspaceId ?? existing.workspaceId!;
+        const [member] = await db
+          .select({ id: workspaceMembersTable.id })
+          .from(workspaceMembersTable)
+          .where(
+            and(
+              eq(workspaceMembersTable.workspaceId, workspaceId),
+              eq(workspaceMembersTable.userId, ctx.user.id),
+            ),
+          )
+          .limit(1);
+
+        const [owned] = await db
+          .select({ id: workspacesTable.id })
+          .from(workspacesTable)
+          .where(
+            and(
+              eq(workspacesTable.id, workspaceId),
+              eq(workspacesTable.ownerId, ctx.user.id),
+            ),
+          )
+          .limit(1);
+
+        if (!member && !owned) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You are not a member of this workspace",
+          });
+        }
+      }
+
       const [updated] = await db
         .update(formsTable)
-        .set({ status: "published" })
+        .set(updateData)
         .where(eq(formsTable.id, input.formId))
         .returning();
       if (!updated) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -372,7 +478,7 @@ export const formsRouter = router({
     }),
 
   // -------------------------------------------------------------------------
-  // forms.delete (soft delete → archived)
+  // forms.delete (alias for softDelete — single form)
   // -------------------------------------------------------------------------
   delete: protectedProcedure
     .meta({
@@ -388,9 +494,158 @@ export const formsRouter = router({
       await assertOwnership(input.formId, ctx.user.id);
       await db
         .update(formsTable)
-        .set({ status: "archived" })
-        .where(eq(formsTable.id, input.formId));
+        .set({ deletedAt: new Date() })
+        .where(
+          and(
+            eq(formsTable.id, input.formId),
+            eq(formsTable.creatorId, ctx.user.id),
+          ),
+        );
       return { success: true };
+    }),
+
+  // -------------------------------------------------------------------------
+  // forms.softDelete
+  // -------------------------------------------------------------------------
+  softDelete: protectedProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: getPath("/soft-delete"),
+        tags: TAGS_FORMS,
+      },
+    })
+    .input(z.object({ formIds: z.array(z.string().uuid()).min(1) }))
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ input, ctx }) => {
+      for (const formId of input.formIds) {
+        await assertOwnership(formId, ctx.user.id);
+      }
+      await db
+        .update(formsTable)
+        .set({ deletedAt: new Date() })
+        .where(
+          and(
+            inArray(formsTable.id, input.formIds),
+            eq(formsTable.creatorId, ctx.user.id),
+          ),
+        );
+      return { success: true };
+    }),
+
+  // -------------------------------------------------------------------------
+  // forms.recover
+  // -------------------------------------------------------------------------
+  recover: protectedProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: getPath("/recover"),
+        tags: TAGS_FORMS,
+      },
+    })
+    .input(z.object({ formIds: z.array(z.string().uuid()).min(1) }))
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ input, ctx }) => {
+      for (const formId of input.formIds) {
+        await assertOwnership(formId, ctx.user.id);
+      }
+      const cutoff = trashRecoveryCutoff();
+      await db
+        .update(formsTable)
+        .set({ deletedAt: null })
+        .where(
+          and(
+            inArray(formsTable.id, input.formIds),
+            eq(formsTable.creatorId, ctx.user.id),
+            isNotNull(formsTable.deletedAt),
+            gte(formsTable.deletedAt, cutoff),
+          ),
+        );
+      return { success: true };
+    }),
+
+  // -------------------------------------------------------------------------
+  // forms.listTrash
+  // -------------------------------------------------------------------------
+  listTrash: protectedProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: getPath("/trash"),
+        tags: TAGS_FORMS,
+      },
+    })
+    .input(zodUndefinedModel)
+    .output(z.array(formOutputSchema))
+    .query(async ({ ctx }) => {
+      const cutoff = trashRecoveryCutoff();
+      const items = await db
+        .select()
+        .from(formsTable)
+        .where(
+          and(
+            eq(formsTable.creatorId, ctx.user.id),
+            isNotNull(formsTable.deletedAt),
+            gte(formsTable.deletedAt, cutoff),
+          ),
+        )
+        .orderBy(desc(formsTable.deletedAt));
+
+      return items.map(mapForm);
+    }),
+
+  // -------------------------------------------------------------------------
+  // forms.archive
+  // -------------------------------------------------------------------------
+  archive: protectedProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: getPath("/{formId}/archive"),
+        tags: TAGS_FORMS,
+      },
+    })
+    .input(z.object({ formId: z.string().uuid() }))
+    .output(formOutputSchema)
+    .mutation(async ({ input, ctx }) => {
+      await assertOwnership(input.formId, ctx.user.id);
+      const [updated] = await db
+        .update(formsTable)
+        .set({ status: "archived", deletedAt: null })
+        .where(eq(formsTable.id, input.formId))
+        .returning();
+      if (!updated) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      return mapForm(updated);
+    }),
+
+  // -------------------------------------------------------------------------
+  // forms.listArchived
+  // -------------------------------------------------------------------------
+  listArchived: protectedProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: getPath("/archived"),
+        tags: TAGS_FORMS,
+      },
+    })
+    .input(zodUndefinedModel)
+    .output(z.array(formOutputSchema))
+    .query(async ({ ctx }) => {
+      const items = await db
+        .select()
+        .from(formsTable)
+        .where(
+          and(
+            eq(formsTable.creatorId, ctx.user.id),
+            eq(formsTable.status, "archived"),
+            isNull(formsTable.deletedAt),
+          ),
+        )
+        .orderBy(desc(formsTable.updatedAt));
+
+      return items.map(mapForm);
     }),
 
   // -------------------------------------------------------------------------

@@ -2,18 +2,78 @@
 
 import React from "react";
 import { FormSettingsSchema } from "@repo/schemas";
+import { trpc } from "~/trpc/client";
 
 interface SettingsPanelProps {
-  settings: Partial<FormSettingsSchema>;
+  settings: Partial<FormSettingsSchema> & {
+    scope?: "global" | "workspace";
+    workspaceId?: string | null;
+    requiresAuth?: boolean;
+  };
   onUpdate: (updates: Partial<FormSettingsSchema>) => void;
 }
 
 export function SettingsPanel({ settings, onUpdate }: SettingsPanelProps) {
+  const { data: workspaces = [] } = trpc.workspaces.list.useQuery();
   return (
     <div className="space-y-6">
       <div className="space-y-4">
         <h3 className="text-sm font-semibold border-b pb-2">General Settings</h3>
         
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Scope</label>
+          <select
+            value={settings.scope || "global"}
+            onChange={(e) => {
+              const scope = e.target.value as "global" | "workspace";
+              onUpdate({
+                scope,
+                workspaceId: scope === "global" ? null : settings.workspaceId,
+              });
+            }}
+            className="w-full text-sm p-2 rounded-md border border-input bg-background"
+          >
+            <option value="global">Global (Explore when public)</option>
+            <option value="workspace">Workspace only</option>
+          </select>
+        </div>
+
+        {(settings.scope || "global") === "workspace" && (
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Workspace</label>
+            <select
+              value={settings.workspaceId || ""}
+              onChange={(e) =>
+                onUpdate({
+                  workspaceId: e.target.value || null,
+                  scope: "workspace",
+                })
+              }
+              className="w-full text-sm p-2 rounded-md border border-input bg-background"
+            >
+              <option value="">Select a workspace</option>
+              {workspaces.map((ws) => (
+                <option key={ws.id} value={ws.id}>
+                  {ws.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="requires-auth"
+            checked={settings.requiresAuth || false}
+            onChange={(e) => onUpdate({ requiresAuth: e.target.checked })}
+            className="w-4 h-4 rounded border-input"
+          />
+          <label htmlFor="requires-auth" className="text-sm font-medium cursor-pointer">
+            Require sign-in to submit
+          </label>
+        </div>
+
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Visibility</label>
           <select

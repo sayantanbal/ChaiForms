@@ -45,6 +45,7 @@ const adminUserSchema = z.object({
   email: z.string().email(),
   fullName: z.string(),
   role: z.enum(["creator", "admin"]),
+  isBlocked: z.boolean(),
   formCount: z.number().int(),
   createdAt: z.string().datetime().nullable(),
 });
@@ -186,6 +187,7 @@ export const adminRouter = router({
             email: usersTable.email,
             fullName: usersTable.fullName,
             role: usersTable.role,
+            isBlocked: usersTable.isBlocked,
             createdAt: usersTable.createdAt,
           })
           .from(usersTable)
@@ -222,6 +224,44 @@ export const adminRouter = router({
         page: input.page,
         pageSize: input.pageSize,
       };
+    }),
+
+  // -------------------------------------------------------------------------
+  // admin.blockUser
+  // -------------------------------------------------------------------------
+  blockUser: adminProcedure
+    .meta({
+      openapi: { method: "POST", path: getPath("/users/{userId}/block"), tags: TAGS },
+    })
+    .input(z.object({ userId: z.string().uuid() }))
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ input }) => {
+      await db
+        .update(usersTable)
+        .set({ isBlocked: true })
+        .where(eq(usersTable.id, input.userId));
+      return { success: true };
+    }),
+
+  // -------------------------------------------------------------------------
+  // admin.unblockUser
+  // -------------------------------------------------------------------------
+  unblockUser: adminProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: getPath("/users/{userId}/unblock"),
+        tags: TAGS,
+      },
+    })
+    .input(z.object({ userId: z.string().uuid() }))
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ input }) => {
+      await db
+        .update(usersTable)
+        .set({ isBlocked: false })
+        .where(eq(usersTable.id, input.userId));
+      return { success: true };
     }),
 });
 
