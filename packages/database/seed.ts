@@ -398,7 +398,7 @@ async function seed() {
       accessPasswordHash: null,
       pages: [
         {
-          id: "p1-0000-0000-0000-000000000001",
+          id: "e1000000-0000-0000-0000-000000000001",
           title: "Your Preferences",
           order: 0,
           fieldIds: [
@@ -408,7 +408,7 @@ async function seed() {
           ],
         },
         {
-          id: "p1-0000-0000-0000-000000000002",
+          id: "e1000000-0000-0000-0000-000000000002",
           title: "Your Anime History",
           order: 1,
           fieldIds: [

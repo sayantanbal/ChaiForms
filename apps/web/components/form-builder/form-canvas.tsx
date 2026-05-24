@@ -2,18 +2,11 @@
 
 import React from "react";
 import { 
-  DndContext, 
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent
+  useDroppable
 } from "@dnd-kit/core";
 import { 
   SortableContext, 
   verticalListSortingStrategy,
-  sortableKeyboardCoordinates
 } from "@dnd-kit/sortable";
 import { FieldSchemaUnion } from "@repo/schemas";
 import { FieldCard } from "./field-card";
@@ -36,22 +29,12 @@ export function FormCanvas({
   onReorderFields,
   onAddField
 }: FormCanvasProps) {
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      onReorderFields(active.id as string, over.id as string);
-    }
-  };
+  const { setNodeRef } = useDroppable({
+    id: "form-canvas-droppable",
+  });
 
   return (
-    <div className="flex-1 bg-muted/30 overflow-y-auto p-6 md:p-10 flex flex-col items-center">
+    <div ref={setNodeRef} className="flex-1 bg-muted/30 overflow-y-auto p-6 md:p-10 flex flex-col items-center">
       <div className="w-full max-w-3xl flex flex-col gap-4">
         {fields.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-xl bg-card text-center">
@@ -68,11 +51,7 @@ export function FormCanvas({
             </button>
           </div>
         ) : (
-          <DndContext 
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
+          <>
             <SortableContext 
               items={fields.map(f => f.id)}
               strategy={verticalListSortingStrategy}
@@ -99,7 +78,7 @@ export function FormCanvas({
                 Add Field
               </button>
             </div>
-          </DndContext>
+          </>
         )}
       </div>
     </div>

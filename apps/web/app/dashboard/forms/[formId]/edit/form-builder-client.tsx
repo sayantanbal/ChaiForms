@@ -14,7 +14,16 @@ import { SettingsPanel } from "@/components/form-builder/settings-panel";
 import { Eye, Share2, Globe, Save, Loader2, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { arrayMove } from "@dnd-kit/sortable";
+import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { 
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from "@dnd-kit/core";
 
 export function FormBuilderClient({ initialForm }: { initialForm: any }) {
   const [fields, setFields] = useState<FieldSchemaUnion[]>(initialForm.fields || []);
@@ -111,8 +120,34 @@ export function FormBuilderClient({ initialForm }: { initialForm: any }) {
   const isPublished = initialForm.status === "published";
   const estimatedTime = Math.max(1, Math.ceil(fields.length * 0.5));
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    if (active.data.current?.type === "field-type" && over.id === "form-canvas-droppable") {
+      handleAddField(active.data.current.fieldType);
+      return;
+    }
+
+    if (active.id !== over.id && !active.id.toString().startsWith("palette-")) {
+      handleReorderFields(active.id as string, over.id as string);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <DndContext 
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="flex flex-col h-screen bg-background">
       {/* Header */}
       <header className="h-14 border-b border-border flex items-center justify-between px-4 shrink-0 bg-card">
         <div className="flex items-center gap-4">
@@ -143,6 +178,11 @@ export function FormBuilderClient({ initialForm }: { initialForm: any }) {
             <Eye className="w-5 h-5" />
           </Link>
           <button
+            onClick={() => {
+              const url = `${window.location.origin}/forms/${initialForm.slug || initialForm.id}`;
+              navigator.clipboard.writeText(url);
+              toast.success("Link copied to clipboard!");
+            }}
             className="p-2 text-muted-foreground hover:text-foreground transition-colors"
             title="Share"
           >
@@ -152,7 +192,7 @@ export function FormBuilderClient({ initialForm }: { initialForm: any }) {
           {isPublished ? (
             <button
               onClick={() => unpublishMutation.mutate({ formId: initialForm.id })}
-              className="px-4 py-1.5 text-sm font-medium border border-border rounded-md hover:bg-accent transition-colors"
+              className="px-4 py-1.5 text-sm font-medium border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground rounded-md transition-colors"
               disabled={unpublishMutation.isPending}
             >
               Unpublish
@@ -199,7 +239,7 @@ export function FormBuilderClient({ initialForm }: { initialForm: any }) {
         <Separator className="w-1 bg-border hover:bg-primary/50 cursor-col-resize transition-colors" />
         
         {/* Right Panel: Configuration */}
-        <Panel defaultSize="25%" minSize="20%" maxSize="40%" className="flex flex-col bg-background">
+        <Panel defaultSize="25%" minSize="20%" maxSize="40%" className="flex flex-col bg-background text-foreground">
           <div className="flex border-b border-border p-2 gap-2 shrink-0">
             <button
               onClick={() => setActiveTab("field")}
@@ -249,5 +289,6 @@ export function FormBuilderClient({ initialForm }: { initialForm: any }) {
         </Panel>
       </Group>
     </div>
+    </DndContext>
   );
 }
