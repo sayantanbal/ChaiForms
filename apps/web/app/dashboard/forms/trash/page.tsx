@@ -14,7 +14,7 @@ function daysUntilPurge(deletedAt: string | null): number {
 }
 
 export default function FormsTrashPage() {
-  const { data: forms = [], isLoading, refetch } = trpc.forms.listTrash.useQuery();
+  const { data: forms = [], isLoading, refetch } = trpc.forms.listTrash.useQuery(undefined);
 
   const recoverMutation = trpc.forms.recover.useMutation({
     onSuccess: () => {

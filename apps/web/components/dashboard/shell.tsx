@@ -37,7 +37,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (meError?.data?.code !== "UNAUTHORIZED" || triedSessionSync.current) return;
     triedSessionSync.current = true;
-    syncSession.mutate();
+    syncSession.mutate(undefined);
   }, [meError, syncSession]);
 
   return (
@@ -107,7 +107,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           )}
           <button
-            onClick={() => signOutMutation.mutate()}
+            onClick={() => signOutMutation.mutate(undefined)}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all"
           >
             <span>🚪</span>

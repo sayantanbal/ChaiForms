@@ -18,7 +18,7 @@ export default function NewFormPage() {
     onError: (e) => toast.error(e.message),
   });
 
-  const { data: templates, isLoading: templatesLoading } = trpc.explore.listTemplates.useQuery();
+  const { data: templates, isLoading: templatesLoading } = trpc.explore.listTemplates.useQuery(undefined);
 
   const createFromTemplateMutation = trpc.forms.createFromTemplate.useMutation({
     onSuccess: (form) => {

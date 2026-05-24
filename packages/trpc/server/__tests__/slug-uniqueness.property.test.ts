@@ -106,7 +106,7 @@ describe("forms.update slug uniqueness", () => {
         }));
 
         const ctx = createContext();
-        const caller = formsRouter.createCaller(ctx);
+        const caller = formsRouter.createCaller(ctx as any);
         
         await expect(caller.update({ formId, slug })).rejects.toMatchObject({
           code: "CONFLICT",

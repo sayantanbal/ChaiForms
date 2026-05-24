@@ -74,7 +74,7 @@ async function getAuthUrl() {
 
 async function getFeaturedForms() {
   try {
-    return await api.explore.listFeaturedForms.query();
+    return await api.explore.listFeaturedForms.query(undefined);
   } catch {
     return [];
   }

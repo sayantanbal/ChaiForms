@@ -11,7 +11,7 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   try {
-    await api.admin.getStats.query();
+    await api.admin.getStats.query(undefined);
   } catch (error) {
     if (
       error instanceof TRPCClientError &&

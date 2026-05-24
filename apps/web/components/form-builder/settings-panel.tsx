@@ -14,7 +14,7 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ settings, onUpdate }: SettingsPanelProps) {
-  const { data: workspaces = [] } = trpc.workspaces.list.useQuery();
+  const { data: workspaces = [] } = trpc.workspaces.list.useQuery(undefined);
   return (
     <div className="space-y-6">
       <div className="space-y-4">

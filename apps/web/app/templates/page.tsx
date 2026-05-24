@@ -26,7 +26,7 @@ const THEME_EMOJIS: Record<string, string> = {
 
 async function getTemplates() {
   try {
-    return await api.explore.listTemplates.query();
+    return await api.explore.listTemplates.query(undefined);
   } catch {
     return [];
   }

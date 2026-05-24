@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 export default function WorkspacesPage() {
   const [name, setName] = useState("");
-  const { data: workspaces = [], isLoading, refetch } = trpc.workspaces.list.useQuery();
+  const { data: workspaces = [], isLoading, refetch } = trpc.workspaces.list.useQuery(undefined);
 
   const createMutation = trpc.workspaces.create.useMutation({
     onSuccess: () => {

@@ -121,7 +121,7 @@ describe("forms.update slug validation", () => {
         }));
 
         const ctx = createContext();
-        const caller = formsRouter.createCaller(ctx);
+        const caller = formsRouter.createCaller(ctx as any);
         const result = await caller.update({ formId: baseForm.id, slug });
         expect(result.slug).toBe(baseForm.slug);
       }),
@@ -134,7 +134,7 @@ describe("forms.update slug validation", () => {
     await fc.assert(
       fc.asyncProperty(invalidSlugArb, async (slug) => {
         const ctx = createContext();
-        const caller = formsRouter.createCaller(ctx);
+        const caller = formsRouter.createCaller(ctx as any);
 
         await expect(
           caller.update({ formId: baseForm.id, slug }),

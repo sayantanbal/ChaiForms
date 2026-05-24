@@ -34,7 +34,7 @@ export function EmailSignInForm({ disabled = false }: EmailSignInFormProps) {
     }
 
     try {
-      await syncSession.mutateAsync();
+      await syncSession.mutateAsync(undefined);
       router.replace("/dashboard");
     } catch (syncError) {
       setError(syncError instanceof Error ? syncError.message : "Failed to start session");

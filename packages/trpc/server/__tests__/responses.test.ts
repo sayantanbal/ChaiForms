@@ -147,7 +147,7 @@ function createContext(opts?: { method?: string; withCsrf?: boolean }) {
       cookie: vi.fn(),
       clearCookie: vi.fn(),
     },
-  };
+  } as any;
 }
 
 beforeAll(() => {
@@ -379,7 +379,7 @@ describe("responses router", () => {
     const ctx = createContext();
     const caller = responsesRouter.createCaller({
       ...ctx,
-      user: { id: "owner", role: "creator" },
+      user: { id: "owner", role: "creator" } as any,
     });
 
     const result = await caller.list({ formId: baseForm.id, page: 1, pageSize: 20 });
@@ -416,7 +416,7 @@ describe("responses router", () => {
     const ctx = createContext();
     const caller = responsesRouter.createCaller({
       ...ctx,
-      user: { id: "owner", role: "creator" },
+      user: { id: "owner", role: "creator" } as any,
     });
 
     const csv = await caller.exportCsv({ formId: baseForm.id });

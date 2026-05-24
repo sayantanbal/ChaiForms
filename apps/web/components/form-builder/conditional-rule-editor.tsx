@@ -44,8 +44,7 @@ function RuleGroupRenderer({
   const addRule = () => {
     if (precedingFields.length === 0) return;
     const newRule = {
-      id: uuidv4(),
-      field: precedingFields[0].id,
+      field: precedingFields[0]!.id,
       operator: "equals",
       value: ""
     };
@@ -54,7 +53,6 @@ function RuleGroupRenderer({
 
   const addGroup = () => {
     const newGroup = {
-      id: uuidv4(),
       combinator: "AND",
       rules: []
     };
@@ -195,10 +193,8 @@ export function ConditionalRuleEditor({ field, allFields, onChange }: Conditiona
   let rootGroup = field.conditionalRules;
   if (Array.isArray(rootGroup)) {
     rootGroup = {
-      id: uuidv4(),
       combinator: "AND",
       rules: rootGroup.map(r => ({
-        id: uuidv4(),
         field: r.sourceFieldId,
         operator: r.operator,
         value: r.value
@@ -220,7 +216,7 @@ export function ConditionalRuleEditor({ field, allFields, onChange }: Conditiona
         <label className="text-sm font-medium">Show this field if...</label>
         <p className="text-sm text-muted-foreground italic mb-2">Always visible</p>
         <button
-          onClick={() => onChange({ id: uuidv4(), combinator: "AND", rules: [] })}
+          onClick={() => onChange({ combinator: "AND", rules: [] })}
           type="button"
           className="text-xs flex items-center gap-1 text-primary hover:text-primary/80"
         >

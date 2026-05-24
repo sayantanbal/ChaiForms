@@ -4,7 +4,7 @@ import Link from "next/link";
 import { trpc } from "~/trpc/client";
 
 export default function FormsArchivePage() {
-  const { data: forms = [], isLoading } = trpc.forms.listArchived.useQuery();
+  const { data: forms = [], isLoading } = trpc.forms.listArchived.useQuery(undefined);
 
   if (isLoading) {
     return (

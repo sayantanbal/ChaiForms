@@ -49,8 +49,8 @@ describe("forms.unlock", () => {
 
           const caller = formsRouter.createCaller({
             user: null,
-            req: { headers: {}, cookies: {} },
-            res: { cookie: vi.fn(), clearCookie: vi.fn() },
+            req: { headers: {}, cookies: {} } as any,
+            res: { cookie: vi.fn(), clearCookie: vi.fn() } as any,
           });
 
           const result = await caller.unlock({
@@ -89,8 +89,8 @@ describe("forms.unlock", () => {
 
           const caller = formsRouter.createCaller({
             user: null,
-            req: { headers: {}, cookies: {} },
-            res: { cookie: vi.fn(), clearCookie: vi.fn() },
+            req: { headers: {}, cookies: {} } as any,
+            res: { cookie: vi.fn(), clearCookie: vi.fn() } as any,
           });
 
           await expect(

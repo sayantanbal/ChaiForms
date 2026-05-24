@@ -9,7 +9,7 @@ function normalizeVoidInput(val: unknown): void | undefined {
   if (typeof val === "object" && !Array.isArray(val) && Object.keys(val).length === 0) {
     return undefined;
   }
-  return val as void | undefined;
+  return val as unknown as void | undefined;
 }
 
 export const zodUndefinedModel = z.preprocess(normalizeVoidInput, z.void().optional());

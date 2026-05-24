@@ -37,10 +37,14 @@ export function FieldConfigPanel({ field, allFields, onChange }: FieldConfigPane
                 <div key={i} className="flex gap-2">
                   <input
                     type="text"
-                    value={opt}
+                    value={typeof opt === 'string' ? opt : opt.label}
                     onChange={(e) => {
                       const newOpts = [...(field.options || [])];
-                      newOpts[i] = e.target.value;
+                      if (typeof newOpts[i] === 'string') {
+                        newOpts[i] = e.target.value;
+                      } else {
+                        newOpts[i] = { ...(newOpts[i] as any), label: e.target.value, value: e.target.value };
+                      }
                       updateField({ options: newOpts });
                     }}
                     className="flex-1 text-sm p-2 rounded-md border border-input bg-background"
