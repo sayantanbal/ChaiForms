@@ -14,6 +14,7 @@ import {
   workspaceAdminProcedure,
 } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
+import { zodUndefinedModel } from "../../schema";
 
 const TAGS = ["Workspaces"];
 const getPath = generatePath("/workspaces");
@@ -142,7 +143,7 @@ export const workspacesRouter = router({
     .meta({
       openapi: { method: "GET", path: getPath(""), tags: TAGS },
     })
-    .input(z.void().optional())
+    .input(zodUndefinedModel)
     .output(z.array(workspaceOutputSchema))
     .query(async ({ ctx }) => {
       const owned = await db

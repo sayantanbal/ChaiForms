@@ -11,8 +11,8 @@ function AuthCallbackContent() {
   const code = searchParams.get("code");
 
   const { data, error, isLoading } = trpc.auth.callback.useQuery(
-    { code: code ?? "" },
-    { enabled: !!code },
+    { code: code! },
+    { enabled: Boolean(code?.trim()) },
   );
 
   useEffect(() => {

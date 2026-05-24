@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { trpc } from "~/trpc/client";
 import { toast } from "sonner";
 
@@ -17,13 +18,27 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const { data: me } = trpc.auth.me.useQuery();
+  const utils = trpc.useUtils();
+  const triedSessionSync = useRef(false);
+  const { data: me, error: meError } = trpc.auth.me.useQuery(undefined, { retry: false });
+  const syncSession = trpc.auth.syncSession.useMutation({
+    onSuccess: () => {
+      void utils.auth.me.invalidate();
+    },
+  });
   const signOutMutation = trpc.auth.signOut.useMutation({
     onSuccess: () => {
       toast.success("Signed out");
       router.push("/");
     },
   });
+
+  // Neon sign-in sets a web-origin session; sync once to issue API cookies.
+  useEffect(() => {
+    if (meError?.data?.code !== "UNAUTHORIZED" || triedSessionSync.current) return;
+    triedSessionSync.current = true;
+    syncSession.mutate();
+  }, [meError, syncSession]);
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex">
