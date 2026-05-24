@@ -13,6 +13,7 @@ interface FormRendererProps {
   pages?: { id: string; fieldIds: string[] }[];
   thankyouMessage?: string | null;
   unlockToken?: string;
+  previewMode?: boolean;
 }
 
 export function FormRenderer({
@@ -20,7 +21,8 @@ export function FormRenderer({
   fields,
   pages,
   thankyouMessage,
-  unlockToken
+  unlockToken,
+  previewMode = false,
 }: FormRendererProps) {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -134,6 +136,12 @@ export function FormRenderer({
             const value = Array.isArray(raw) ? JSON.stringify(raw) : String(raw);
             return { fieldId: f.id, value };
           });
+
+        if (previewMode) {
+          // In preview mode, don't actually submit
+          setErrors({ "submit": "Submissions are disabled in preview mode." });
+          return;
+        }
 
         submitMutation.mutate({
           formId,

@@ -8,9 +8,19 @@ export default async function DashboardPage() {
   try {
     const result = await api.forms.list.query({ page: 1, pageSize: 100 });
     forms = result.items;
+
+    // Aggregate total responses across all forms
+    const summaries = await Promise.allSettled(
+      forms.map((f) => api.analytics.getSummary.query({ formId: f.id }))
+    );
+    totalResponses = summaries.reduce((sum, r) => {
+      if (r.status === "fulfilled") return sum + r.value.totalResponses;
+      return sum;
+    }, 0);
   } catch {
     // Not authed or error — layout handles redirect
   }
+
 
   const publishedCount = forms.filter((f) => f.status === "published").length;
 
