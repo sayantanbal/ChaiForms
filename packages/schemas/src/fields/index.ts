@@ -1,25 +1,25 @@
 import { z } from "zod";
-import { baseField, conditionalRuleSchema } from "./base.js";
-import { shortTextFieldSchema } from "./short-text.js";
-import { longTextFieldSchema } from "./long-text.js";
-import { emailFieldSchema } from "./email.js";
-import { numberFieldSchema } from "./number.js";
-import { singleSelectFieldSchema } from "./single-select.js";
-import { multiSelectFieldSchema } from "./multi-select.js";
-import { checkboxFieldSchema } from "./checkbox.js";
-import { ratingFieldSchema } from "./rating.js";
-import { dateFieldSchema } from "./date.js";
+import { baseField, conditionalRuleSchema } from "./base.ts";
+import { shortTextFieldSchema } from "./short-text.ts";
+import { longTextFieldSchema } from "./long-text.ts";
+import { emailFieldSchema } from "./email.ts";
+import { numberFieldSchema } from "./number.ts";
+import { singleSelectFieldSchema } from "./single-select.ts";
+import { multiSelectFieldSchema } from "./multi-select.ts";
+import { checkboxFieldSchema } from "./checkbox.ts";
+import { ratingFieldSchema } from "./rating.ts";
+import { dateFieldSchema } from "./date.ts";
 
 export { baseField, conditionalRuleSchema };
-export { shortTextFieldSchema } from "./short-text.js";
-export { longTextFieldSchema } from "./long-text.js";
-export { emailFieldSchema } from "./email.js";
-export { numberFieldSchema } from "./number.js";
-export { singleSelectFieldSchema } from "./single-select.js";
-export { multiSelectFieldSchema } from "./multi-select.js";
-export { checkboxFieldSchema } from "./checkbox.js";
-export { ratingFieldSchema } from "./rating.js";
-export { dateFieldSchema } from "./date.js";
+export { shortTextFieldSchema } from "./short-text.ts";
+export { longTextFieldSchema } from "./long-text.ts";
+export { emailFieldSchema } from "./email.ts";
+export { numberFieldSchema } from "./number.ts";
+export { singleSelectFieldSchema } from "./single-select.ts";
+export { multiSelectFieldSchema } from "./multi-select.ts";
+export { checkboxFieldSchema } from "./checkbox.ts";
+export { ratingFieldSchema } from "./rating.ts";
+export { dateFieldSchema } from "./date.ts";
 
 export const FieldSchemaUnion = z.discriminatedUnion("type", [
   shortTextFieldSchema,

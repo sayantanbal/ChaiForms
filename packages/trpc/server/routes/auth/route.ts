@@ -18,11 +18,8 @@ import {
   hashToken,
   generateTokenId,
 } from "../../utils/jwt";
-import {
-  createCsrfToken,
-  csrfCookieOptions,
-  CSRF_COOKIE_NAME,
-} from "../../utils/csrf";
+import { createCsrfToken, csrfCookieOptions } from "../../utils/csrf";
+import { CSRF_COOKIE_NAME } from "../../../shared/csrf";
 
 const TAGS = ["Authentication"];
 const getPath = generatePath("/authentication");
@@ -94,9 +91,7 @@ export const authRouter: ReturnType<typeof router> = router({
     )
     .query(async () => {
       const webOrigin =
-        process.env.WEB_ORIGIN ??
-        process.env.NEXT_PUBLIC_WEB_BASE_URL ??
-        "http://localhost:3000";
+        process.env.WEB_ORIGIN ?? process.env.NEXT_PUBLIC_WEB_BASE_URL ?? "http://localhost:3000";
       const providers: {
         provider: "NEON_AUTH" | "GOOGLE_OAUTH";
         displayName?: string;
@@ -325,9 +320,7 @@ export const authRouter: ReturnType<typeof router> = router({
       }
 
       // Invalidate the old token
-      await db
-        .delete(refreshTokensTable)
-        .where(eq(refreshTokensTable.id, tokenRow.id));
+      await db.delete(refreshTokensTable).where(eq(refreshTokensTable.id, tokenRow.id));
 
       const newFamily = payload.family; // keep same family
       const newRefreshPlain = generateTokenId();
@@ -383,9 +376,7 @@ export const authRouter: ReturnType<typeof router> = router({
     .mutation(async ({ ctx }) => {
       const isProd = process.env.NODE_ENV === "production";
 
-      await db
-        .delete(refreshTokensTable)
-        .where(eq(refreshTokensTable.userId, ctx.user.id));
+      await db.delete(refreshTokensTable).where(eq(refreshTokensTable.userId, ctx.user.id));
 
       ctx.res.clearCookie(ACCESS_COOKIE_NAME, { path: "/" });
       ctx.res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions(isProd));

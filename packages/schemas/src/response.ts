@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { clientContextSchema } from "./client-context.js";
+import { clientContextSchema } from "./client-context.ts";
 
 export const answerSchema = z.object({
   fieldId: z.uuid(),

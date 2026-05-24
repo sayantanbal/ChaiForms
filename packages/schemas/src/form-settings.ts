@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FieldSchemaUnion } from "./fields/index.js";
+import { FieldSchemaUnion } from "./fields/index.ts";
 
 export const slugPattern = /^[a-z0-9-]{3,60}$/;
 
@@ -17,16 +17,7 @@ export const formSettingsSchema = z.object({
   status: z.enum(["draft", "published", "archived"]).optional(),
   visibility: z.enum(["public", "unlisted"]).optional(),
   theme: z
-    .enum([
-      "default",
-      "anime",
-      "movie",
-      "game",
-      "startup",
-      "tech_company",
-      "os",
-      "event",
-    ])
+    .enum(["default", "anime", "movie", "game", "startup", "tech_company", "os", "event"])
     .optional(),
   thankyouMessage: z.string().max(1000).optional(),
   expiryDate: z.iso.datetime().nullable().optional(),

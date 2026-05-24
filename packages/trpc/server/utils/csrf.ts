@@ -2,9 +2,19 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from "../../shared/csrf";
 
+const DEV_CSRF_SECRET = "chaiforms-dev-csrf-secret-chaiforms-dev-csrf-secret";
+
 function getCsrfSecret(): string {
   const secret =
     process.env.CSRF_SECRET ?? process.env.JWT_SECRET ?? process.env.NEON_AUTH_COOKIE_SECRET;
+  if (secret && secret.length >= 32) {
+    return secret;
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    return DEV_CSRF_SECRET;
+  }
+
   if (!secret || secret.length < 32) {
     throw new Error(
       "CSRF_SECRET, JWT_SECRET, or NEON_AUTH_COOKIE_SECRET (min 32 chars) is required",

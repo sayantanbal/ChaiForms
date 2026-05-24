@@ -22,13 +22,8 @@ export const serverRouter = router({
 
 export { createContext } from "./context";
 export type ServerRouter = typeof serverRouter;
-export {
-  createCsrfToken,
-  CSRF_COOKIE_NAME,
-  CSRF_HEADER_NAME,
-  csrfCookieOptions,
-  assertCsrf,
-} from "./utils/csrf";
+export { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from "../shared/csrf";
+export { createCsrfToken, csrfCookieOptions, assertCsrf } from "./utils/csrf";
 export {
   broadcastDelta,
   subscribeToChannel,

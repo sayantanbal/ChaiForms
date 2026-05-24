@@ -31,6 +31,10 @@ export async function getTrpcHeaders(): Promise<Record<string, string>> {
   const csrf = await ensureCsrfToken();
   headers[CSRF_HEADER_NAME] = csrf;
 
+  if (process.env.NODE_ENV !== "production") {
+    return headers;
+  }
+
   const { authClient } = await import("~/lib/auth/client");
   const session = await authClient.getSession();
   const token = session.data?.session?.token;

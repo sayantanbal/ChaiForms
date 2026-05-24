@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { baseField } from "./base.js";
+import { baseField } from "./base.ts";
 
 export const singleSelectFieldSchema = baseField.extend({
   type: z.literal("single_select"),
