@@ -25,6 +25,9 @@ export const usersTable = pgTable("users", {
 
   role: userRoleEnum("role").default("creator").notNull(),
 
+  /** Blocked users receive FORBIDDEN on all protected procedures */
+  isBlocked: boolean("is_blocked").default(false).notNull(),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 });
