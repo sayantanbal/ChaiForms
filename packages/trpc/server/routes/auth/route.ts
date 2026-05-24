@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { db, eq } from "@repo/database";
-import { usersTable } from "@repo/database/schema";
+import { usersTable, refreshTokensTable } from "@repo/database/schema";
 import {
   getNeonAuthProfileBySessionToken,
   syncUserFromNeonAuth,
@@ -11,25 +11,47 @@ import {
 import { zodUndefinedModel } from "../../schema";
 import { publicProcedure, protectedProcedure, router } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
-import { signJwt } from "../../utils/jwt";
+import {
+  signAccessJwt,
+  signRefreshJwt,
+  verifyRefreshJwt,
+  hashToken,
+  generateTokenId,
+} from "../../utils/jwt";
+import {
+  createCsrfToken,
+  csrfCookieOptions,
+  CSRF_COOKIE_NAME,
+} from "../../utils/csrf";
 
 const TAGS = ["Authentication"];
 const getPath = generatePath("/authentication");
-const SESSION_COOKIE_NAME = "session";
-const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-function getSessionCookieOptions(isProd: boolean) {
+const ACCESS_COOKIE_NAME = "chaiforms-access";
+const REFRESH_COOKIE_NAME = "chaiforms-refresh";
+
+function accessCookieOptions(isProd: boolean) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
     secure: isProd,
-    maxAge: SESSION_MAX_AGE_MS,
+    maxAge: 15 * 60 * 1000, // 15 mins
     path: "/",
   };
 }
 
+function refreshCookieOptions(isProd: boolean) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: isProd,
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    path: "/api/trpc/auth", // Ensure path matches tRPC base
+  };
+}
+
 const userOutputSchema = z.object({
-  id: z.uuid(),
+  id: z.string().uuid(),
   email: z.string().email(),
   fullName: z.string(),
   role: z.enum(["creator", "admin"]),
@@ -72,7 +94,9 @@ export const authRouter: ReturnType<typeof router> = router({
     )
     .query(async () => {
       const webOrigin =
-        process.env.WEB_ORIGIN ?? process.env.NEXT_PUBLIC_WEB_BASE_URL ?? "http://localhost:3000";
+        process.env.WEB_ORIGIN ??
+        process.env.NEXT_PUBLIC_WEB_BASE_URL ??
+        "http://localhost:3000";
       const providers: {
         provider: "NEON_AUTH" | "GOOGLE_OAUTH";
         displayName?: string;
@@ -143,11 +167,9 @@ export const authRouter: ReturnType<typeof router> = router({
         redirectUri,
       });
 
-      let tokenResult: { tokens: { id_token?: string | null } };
+      let tokenResult;
       try {
-        tokenResult = (await client.getToken(input.code)) as {
-          tokens: { id_token?: string | null };
-        };
+        tokenResult = await client.getToken(input.code);
       } catch {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -219,11 +241,129 @@ export const authRouter: ReturnType<typeof router> = router({
         });
       }
 
-      const token = signJwt(user.id);
+      if (user.isBlocked) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Account blocked",
+        });
+      }
+
+      const familyId = generateTokenId();
+      const refreshPlain = generateTokenId();
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      await db.insert(refreshTokensTable).values({
+        userId: user.id,
+        family: familyId,
+        tokenHash: hashToken(refreshPlain),
+        expiresAt,
+      });
+
+      const accessJwt = signAccessJwt(user.id);
+      const refreshJwt = signRefreshJwt(user.id, familyId);
+      const csrf = createCsrfToken();
       const isProd = process.env.NODE_ENV === "production";
-      ctx.res.cookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions(isProd));
+
+      ctx.res.cookie(ACCESS_COOKIE_NAME, accessJwt, accessCookieOptions(isProd));
+      ctx.res.cookie(
+        REFRESH_COOKIE_NAME,
+        `${refreshPlain}:${refreshJwt}`,
+        refreshCookieOptions(isProd),
+      );
+      ctx.res.cookie(CSRF_COOKIE_NAME, csrf, csrfCookieOptions(isProd));
 
       return { user: mapUser(user) };
+    }),
+
+  refreshToken: publicProcedure
+    .meta({
+      openapi: { method: "POST", path: getPath("/refresh-token"), tags: TAGS },
+    })
+    .input(zodUndefinedModel)
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ ctx }) => {
+      const refreshCookie = (ctx.req.cookies as Record<string, string | undefined>)?.[
+        REFRESH_COOKIE_NAME
+      ];
+      if (!refreshCookie) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      const parts = refreshCookie.split(":");
+      if (parts.length !== 2) throw new TRPCError({ code: "UNAUTHORIZED" });
+      const [plainToken, jwtString] = parts;
+      if (!plainToken || !jwtString) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      let payload;
+      try {
+        payload = verifyRefreshJwt(jwtString);
+      } catch {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      const hashed = hashToken(plainToken);
+      const [tokenRow] = await db
+        .select()
+        .from(refreshTokensTable)
+        .where(eq(refreshTokensTable.tokenHash, hashed))
+        .limit(1);
+
+      if (!tokenRow) {
+        // Reuse detected (token not found but JWT is valid for family)
+        await db
+          .update(refreshTokensTable)
+          .set({ revokedAt: new Date() })
+          .where(eq(refreshTokensTable.family, payload.family));
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Token reuse detected",
+        });
+      }
+
+      if (tokenRow.revokedAt || tokenRow.expiresAt < new Date()) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      // Invalidate the old token
+      await db
+        .delete(refreshTokensTable)
+        .where(eq(refreshTokensTable.id, tokenRow.id));
+
+      const newFamily = payload.family; // keep same family
+      const newRefreshPlain = generateTokenId();
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      await db.insert(refreshTokensTable).values({
+        userId: payload.sub,
+        family: newFamily,
+        tokenHash: hashToken(newRefreshPlain),
+        expiresAt,
+      });
+
+      const [user] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.id, payload.sub))
+        .limit(1);
+
+      if (!user || user.isBlocked) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      const accessJwt = signAccessJwt(user.id);
+      const newRefreshJwt = signRefreshJwt(user.id, newFamily);
+      const csrf = createCsrfToken();
+      const isProd = process.env.NODE_ENV === "production";
+
+      ctx.res.cookie(ACCESS_COOKIE_NAME, accessJwt, accessCookieOptions(isProd));
+      ctx.res.cookie(
+        REFRESH_COOKIE_NAME,
+        `${newRefreshPlain}:${newRefreshJwt}`,
+        refreshCookieOptions(isProd),
+      );
+      ctx.res.cookie(CSRF_COOKIE_NAME, csrf, csrfCookieOptions(isProd));
+
+      return { success: true };
     }),
 
   me: protectedProcedure
@@ -241,7 +381,15 @@ export const authRouter: ReturnType<typeof router> = router({
     .input(zodUndefinedModel)
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ ctx }) => {
-      ctx.res.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
+      const isProd = process.env.NODE_ENV === "production";
+
+      await db
+        .delete(refreshTokensTable)
+        .where(eq(refreshTokensTable.userId, ctx.user.id));
+
+      ctx.res.clearCookie(ACCESS_COOKIE_NAME, { path: "/" });
+      ctx.res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions(isProd));
+      ctx.res.clearCookie(CSRF_COOKIE_NAME, { path: "/" });
       ctx.res.clearCookie("chaiforms-demo-session", { path: "/" });
       ctx.res.clearCookie("better-auth.session_token", { path: "/" });
       ctx.res.clearCookie("__Secure-better-auth.session_token", { path: "/" });
@@ -273,6 +421,8 @@ export const authRouter: ReturnType<typeof router> = router({
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid session" });
       }
       const user = await syncUserFromNeonAuth(profile);
+      if (user.isBlocked) throw new TRPCError({ code: "FORBIDDEN" });
+
       return { user: mapUser(user) };
     }),
 
@@ -304,9 +454,31 @@ export const authRouter: ReturnType<typeof router> = router({
         });
       }
 
-      const token = signJwt(user.id);
+      if (user.isBlocked) throw new TRPCError({ code: "FORBIDDEN" });
+
+      const familyId = generateTokenId();
+      const refreshPlain = generateTokenId();
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      await db.insert(refreshTokensTable).values({
+        userId: user.id,
+        family: familyId,
+        tokenHash: hashToken(refreshPlain),
+        expiresAt,
+      });
+
+      const accessJwt = signAccessJwt(user.id);
+      const refreshJwt = signRefreshJwt(user.id, familyId);
+      const csrf = createCsrfToken();
       const isProd = process.env.NODE_ENV === "production";
-      ctx.res.cookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions(isProd));
+
+      ctx.res.cookie(ACCESS_COOKIE_NAME, accessJwt, accessCookieOptions(isProd));
+      ctx.res.cookie(
+        REFRESH_COOKIE_NAME,
+        `${refreshPlain}:${refreshJwt}`,
+        refreshCookieOptions(isProd),
+      );
+      ctx.res.cookie(CSRF_COOKIE_NAME, csrf, csrfCookieOptions(isProd));
 
       return { user: mapUser(user) };
     }),

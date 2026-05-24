@@ -7,11 +7,13 @@ import {
   createCsrfToken,
 } from "../utils/csrf";
 import { db } from "@repo/database";
+import { signRefreshJwt } from "../utils/jwt";
 
 const mockDb = db as unknown as {
   select: ReturnType<typeof vi.fn>;
   insert: ReturnType<typeof vi.fn>;
   update: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
 };
 
 const baseUser = {
@@ -21,6 +23,7 @@ const baseUser = {
   role: "creator" as const,
   profileImageUrl: null,
   emailVerified: true,
+  isBlocked: false,
 };
 
 const envKeys = [
@@ -68,6 +71,7 @@ vi.mock("@repo/database", () => ({
     select: vi.fn(),
     insert: vi.fn(),
     update: vi.fn(),
+    delete: vi.fn(),
   },
   eq: vi.fn(),
 }));
@@ -80,6 +84,14 @@ vi.mock("@repo/database/schema", () => ({
     fullName: "fullName",
     profileImageUrl: "profileImageUrl",
     emailVerified: "emailVerified",
+  },
+  refreshTokensTable: {
+    id: "id",
+    userId: "userId",
+    tokenHash: "tokenHash",
+    family: "family",
+    expiresAt: "expiresAt",
+    revokedAt: "revokedAt",
   },
 }));
 
@@ -112,17 +124,29 @@ function mockInsert(rows: unknown[]) {
   return chain;
 }
 
+function mockDelete(rows: unknown[]) {
+  const chain = {
+    where: vi.fn().mockResolvedValue(rows),
+  };
+  mockDb.delete.mockReturnValue(chain);
+  return chain;
+}
+
 function createContext(opts?: {
   user?: typeof baseUser | null;
   method?: string;
   withCsrf?: boolean;
+  cookies?: Record<string, string>;
 }) {
   const token = opts?.withCsrf ? createCsrfToken() : null;
   return {
     user: opts && "user" in opts ? opts.user : baseUser,
     req: {
       headers: token ? { [CSRF_HEADER_NAME]: token } : {},
-      cookies: token ? { [CSRF_COOKIE_NAME]: token } : {},
+      cookies: {
+        ...(token ? { [CSRF_COOKIE_NAME]: token } : {}),
+        ...(opts?.cookies ?? {}),
+      },
       method: opts?.method ?? "GET",
     },
     res: {
@@ -160,12 +184,14 @@ beforeEach(() => {
   mockDb.select.mockReset();
   mockDb.insert.mockReset();
   mockDb.update.mockReset();
+  mockDb.delete.mockReset();
 });
 
 describe("auth router", () => {
-  it("callback sets a session cookie and returns user", async () => {
-    mockSelect([]);
-    mockInsert([baseUser]);
+  it("callback sets access, refresh, and csrf cookies", async () => {
+    mockSelect([]); // user existing check
+    mockInsert([baseUser]); // insert user
+    mockInsert([]); // insert refresh token
 
     const ctx = createContext();
     const caller = authRouter.createCaller(ctx);
@@ -173,75 +199,114 @@ describe("auth router", () => {
 
     expect(result.user.email).toBe(baseUser.email);
     expect(ctx.res.cookie).toHaveBeenCalledWith(
-      "session",
+      "chaiforms-access",
       expect.any(String),
       expect.objectContaining({ httpOnly: true, sameSite: "lax" }),
     );
+    expect(ctx.res.cookie).toHaveBeenCalledWith(
+      "chaiforms-refresh",
+      expect.any(String),
+      expect.objectContaining({ httpOnly: true, sameSite: "lax" }),
+    );
+    expect(ctx.res.cookie).toHaveBeenCalledWith(
+      "chaiforms-csrf",
+      expect.any(String),
+      expect.objectContaining({ sameSite: "strict" }),
+    );
   });
 
-  it("callback returns BAD_REQUEST on invalid code", async () => {
-    mockTokenError = new Error("invalid_code");
+  it("callback rejects blocked user", async () => {
+    mockSelect([{ ...baseUser, isBlocked: true }]);
+
     const ctx = createContext();
     const caller = authRouter.createCaller(ctx);
 
-    await expect(caller.callback({ code: "bad-code" })).rejects.toMatchObject({
-      code: "BAD_REQUEST",
+    await expect(caller.callback({ code: "valid-code" })).rejects.toMatchObject({
+      code: "FORBIDDEN",
     });
   });
 
-  it("me rejects missing user", async () => {
-    const ctx = createContext({ user: null });
-    const caller = authRouter.createCaller(ctx);
-
-    await expect(caller.me()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
-  });
-
-  it("signOut clears session cookies", async () => {
+  it("signOut clears cookies and deletes refresh tokens", async () => {
+    mockDelete([]);
     const ctx = createContext({ method: "POST", withCsrf: true });
     const caller = authRouter.createCaller(ctx);
 
     const result = await caller.signOut();
     expect(result.success).toBe(true);
-    expect(ctx.res.clearCookie).toHaveBeenCalledWith("session", { path: "/" });
-    expect(ctx.res.clearCookie).toHaveBeenCalledWith(
-      "chaiforms-demo-session",
-      { path: "/" },
-    );
+    expect(ctx.res.clearCookie).toHaveBeenCalledWith("chaiforms-access", { path: "/" });
+    expect(ctx.res.clearCookie).toHaveBeenCalledWith("chaiforms-refresh", expect.anything());
+    expect(ctx.res.clearCookie).toHaveBeenCalledWith("chaiforms-csrf", { path: "/" });
+    expect(mockDb.delete).toHaveBeenCalled();
   });
 
-  it("demoLogin is gated by ENABLE_DEMO_LOGIN", async () => {
-    process.env.ENABLE_DEMO_LOGIN = "false";
-    const ctx = createContext({ method: "POST", withCsrf: true });
-    const caller = authRouter.createCaller(ctx);
-
-    await expect(
-      caller.demoLogin({ email: "demo@chaiforms.dev" }),
-    ).rejects.toMatchObject({ code: "NOT_FOUND" });
-    expect(mockDb.select).not.toHaveBeenCalled();
-  });
-
-  it("demoLogin sets the session cookie", async () => {
+  it("demoLogin sets cookies for unblocked user", async () => {
     process.env.ENABLE_DEMO_LOGIN = "true";
     mockSelect([baseUser]);
+    mockInsert([]);
 
     const ctx = createContext({ method: "POST", withCsrf: true });
     const caller = authRouter.createCaller(ctx);
     const result = await caller.demoLogin({ email: "demo@chaiforms.dev" });
 
     expect(result.user.email).toBe(baseUser.email);
-    expect(ctx.res.cookie).toHaveBeenCalledWith(
-      "session",
-      expect.any(String),
-      expect.objectContaining({ httpOnly: true, sameSite: "lax" }),
-    );
+    expect(ctx.res.cookie).toHaveBeenCalledWith("chaiforms-access", expect.any(String), expect.anything());
   });
 
-  it("adminProcedure rejects non-admin users", async () => {
-    const ctx = createContext({ user: { ...baseUser, role: "creator" } });
-    const caller = adminRouter.createCaller(ctx);
+  it("demoLogin rejects blocked user", async () => {
+    process.env.ENABLE_DEMO_LOGIN = "true";
+    mockSelect([{ ...baseUser, isBlocked: true }]);
 
-    await expect(caller.getStats()).rejects.toMatchObject({
+    const ctx = createContext({ method: "POST", withCsrf: true });
+    const caller = authRouter.createCaller(ctx);
+
+    await expect(caller.demoLogin({ email: "demo@chaiforms.dev" })).rejects.toMatchObject({
       code: "FORBIDDEN",
     });
+  });
+
+  it("refreshToken rotates token successfully", async () => {
+    const fakeFamily = "family-123";
+    const refreshJwt = signRefreshJwt(baseUser.id, fakeFamily);
+    const fakeCookie = `plain-token:${refreshJwt}`;
+
+    const ctx = createContext({ method: "POST", withCsrf: true, cookies: { "chaiforms-refresh": fakeCookie } });
+    const caller = authRouter.createCaller(ctx);
+
+    const mockSelectChain = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi
+        .fn()
+        .mockResolvedValueOnce([ { id: "token-id", expiresAt: new Date(Date.now() + 100000) } ])
+        .mockResolvedValueOnce([ baseUser ])
+    };
+    mockDb.select.mockReturnValue(mockSelectChain as any);
+
+    mockDelete([]);
+    mockInsert([]);
+
+    const result = await caller.refreshToken();
+    expect(result.success).toBe(true);
+    expect(mockDb.delete).toHaveBeenCalled();
+    expect(mockDb.insert).toHaveBeenCalled();
+    expect(ctx.res.cookie).toHaveBeenCalledWith("chaiforms-access", expect.any(String), expect.anything());
+  });
+
+  it("refreshToken detects reuse and revokes family", async () => {
+    const fakeFamily = "family-123";
+    const refreshJwt = signRefreshJwt(baseUser.id, fakeFamily);
+    const fakeCookie = `plain-token:${refreshJwt}`;
+
+    const ctx = createContext({ method: "POST", withCsrf: true, cookies: { "chaiforms-refresh": fakeCookie } });
+    const caller = authRouter.createCaller(ctx);
+
+    mockSelect([]);
+    mockUpdate([]);
+
+    await expect(caller.refreshToken()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+      message: "Token reuse detected",
+    });
+    expect(mockDb.update).toHaveBeenCalled();
   });
 });

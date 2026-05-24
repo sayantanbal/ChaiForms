@@ -1,6 +1,8 @@
 import jwt from "jsonwebtoken";
+import { createHash, randomUUID } from "node:crypto";
 
-const EXPIRY = "7d";
+const ACCESS_EXPIRY = "15m";
+const REFRESH_EXPIRY = "30d";
 
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
@@ -10,12 +12,30 @@ function getJwtSecret(): string {
   return secret;
 }
 
-export function signJwt(userId: string): string {
-  return jwt.sign({ sub: userId }, getJwtSecret(), { expiresIn: EXPIRY });
+export function signAccessJwt(userId: string): string {
+  return jwt.sign({ sub: userId }, getJwtSecret(), { expiresIn: ACCESS_EXPIRY });
 }
 
-export function verifyJwt(token: string): { sub: string } {
+export function verifyAccessJwt(token: string): { sub: string } {
   return jwt.verify(token, getJwtSecret()) as { sub: string };
+}
+
+export function signRefreshJwt(userId: string, family: string): string {
+  return jwt.sign({ sub: userId, family }, getJwtSecret(), {
+    expiresIn: REFRESH_EXPIRY,
+  });
+}
+
+export function verifyRefreshJwt(token: string): { sub: string; family: string } {
+  return jwt.verify(token, getJwtSecret()) as { sub: string; family: string };
+}
+
+export function generateTokenId(): string {
+  return randomUUID();
+}
+
+export function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
 }
 
 export function signUnlockToken(formId: string): string {

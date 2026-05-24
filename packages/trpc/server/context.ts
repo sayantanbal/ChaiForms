@@ -6,7 +6,7 @@ import {
   getNeonAuthProfileBySessionToken,
   syncUserFromNeonAuth,
 } from "@repo/services/auth/neon-session";
-import { verifyJwt } from "./utils/jwt";
+import { verifyAccessJwt } from "./utils/jwt";
 
 export async function createContext({
   req,
@@ -14,53 +14,65 @@ export async function createContext({
 }: CreateExpressContextOptions) {
   let user: SelectUser | null = null;
 
-  const sessionToken = extractSessionToken({
-    headers: req.headers,
-    cookies: req.cookies as Record<string, string | undefined>,
-  });
-
-  if (sessionToken) {
+  // 1. Try access JWT (primary path)
+  const accessCookie = (req.cookies as Record<string, string | undefined>)?.[
+    "chaiforms-access"
+  ];
+  
+  if (accessCookie) {
     try {
-      const profile = await getNeonAuthProfileBySessionToken(sessionToken);
-      if (profile) {
-        user = await syncUserFromNeonAuth(profile);
+      const { sub } = verifyAccessJwt(accessCookie);
+      const [found] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.id, sub))
+        .limit(1);
+      if (found && !found.isBlocked) {
+        user = found;
       }
     } catch {
-      user = null;
+      /* expired or invalid */
     }
   }
 
+  // 2. Fallback: Neon Auth session
   if (!user) {
-    const sessionCookie = (req.cookies as Record<string, string | undefined>)?.
-      session;
-    if (sessionCookie) {
+    const sessionToken = extractSessionToken({
+      headers: req.headers,
+      cookies: req.cookies as Record<string, string | undefined>,
+    });
+
+    if (sessionToken) {
       try {
-        const { sub } = verifyJwt(sessionCookie);
-        const [found] = await db
-          .select()
-          .from(usersTable)
-          .where(eq(usersTable.id, sub))
-          .limit(1);
-        user = found ?? null;
+        const profile = await getNeonAuthProfileBySessionToken(sessionToken);
+        if (profile) {
+          const syncedUser = await syncUserFromNeonAuth(profile);
+          if (!syncedUser.isBlocked) {
+            user = syncedUser;
+          }
+        }
       } catch {
         user = null;
       }
     }
   }
 
+  // 3. Fallback: Demo bypass cookie
   if (!user) {
     const demoCookie = (req.cookies as Record<string, string | undefined>)?.[
       "chaiforms-demo-session"
     ];
     if (demoCookie) {
       try {
-        const { sub } = verifyJwt(demoCookie);
+        const { sub } = verifyAccessJwt(demoCookie);
         const [found] = await db
           .select()
           .from(usersTable)
           .where(eq(usersTable.id, sub))
           .limit(1);
-        user = found ?? null;
+        if (found && !found.isBlocked) {
+          user = found;
+        }
       } catch {
         user = null;
       }

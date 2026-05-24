@@ -103,10 +103,10 @@ export function assertCsrf(req: {
 
 export function csrfCookieOptions(isProd: boolean) {
   return {
-    httpOnly: false,
-    sameSite: "lax" as const,
+    httpOnly: false, // Must be readable by client JS
+    sameSite: "strict" as const,
     secure: isProd,
     path: "/",
-    maxAge: 60 * 60 * 24,
+    maxAge: 60 * 60 * 24, // 1 day
   };
 }
