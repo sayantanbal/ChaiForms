@@ -80,6 +80,14 @@ async function getFeaturedForms() {
   }
 }
 
+async function getMe() {
+  try {
+    return await api.auth.me.query(undefined);
+  } catch {
+    return null;
+  }
+}
+
 const THEME_COLORS: Record<string, string> = {
   anime: "from-pink-500 to-purple-600",
   startup: "from-orange-500 to-amber-600",
@@ -92,7 +100,7 @@ const THEME_COLORS: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const [authUrl, featuredForms] = await Promise.all([getAuthUrl(), getFeaturedForms()]);
+  const [authUrl, featuredForms, me] = await Promise.all([getAuthUrl(), getFeaturedForms(), getMe()]);
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -117,12 +125,21 @@ export default async function HomePage() {
                 Pricing
               </Link>
             </div>
-            <a
-              href={authUrl}
-              className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold px-4 py-2 rounded-lg transition-all duration-200 text-sm"
-            >
-              Sign In
-            </a>
+            {me ? (
+              <Link
+                href="/dashboard"
+                className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white font-bold transition-transform hover:scale-105 shadow-lg"
+              >
+                {me.fullName.charAt(0).toUpperCase()}
+              </Link>
+            ) : (
+              <a
+                href={authUrl}
+                className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold px-4 py-2 rounded-lg transition-all duration-200 text-sm"
+              >
+                Sign In
+              </a>
+            )}
           </div>
         </div>
       </nav>

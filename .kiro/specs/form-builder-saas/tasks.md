@@ -179,12 +179,16 @@ All P0 phases → Phase 22 (Deployed demo)
 
 ---
 
-### Phase 7: Theme System (P1)
+### Phase 7: Theme System & Immersive Engine (P1)
 
-- [ ] 13. Implement theme system
-  - [ ] 13.1 Define `THEMES` mapping in `apps/web/lib/themes.ts`
-  - [ ] 13.2 Add CSS variable contract to `apps/web/app/globals.css`
-  - [ ] 13.3 Create `ThemedFormWrapper` component
+- [ ] 13. Implement Component-Based Theme Engine
+  - [ ] 13.1 Create `apps/web/lib/theme-registry.tsx` exporting a React Context (`ThemeContext`) that provides theme-specific field overrides (e.g. `Input`, `Button`, `Card`, `Background`).
+  - [ ] 13.2 Create `ThemeProvider` component that reads the `formThemeEnum` value and injects the corresponding wrapper and field components.
+  - [ ] 13.3 Implement `BaseTheme` (fallback standard UI using existing Radix components).
+  - [ ] 13.4 Implement `StartupTheme` wrapper and corresponding minimal field overrides (Notion/Linear inspired).
+  - [ ] 13.5 Implement `OsTheme` wrapper and corresponding retro field overrides (Windows XP inspired).
+  - [ ] 13.6 Integrate `ThemeProvider` into the public form renderer (`/f/[slug]/page.tsx`).
+  - [ ] 13.7 Integrate `ThemeProvider` into the builder canvas so creators see a true live preview while building.
 
 
 ---

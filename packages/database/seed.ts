@@ -227,6 +227,53 @@ const startupFormFields = [
   },
 ];
 
+const movieFormFields = [
+  {
+    id: "f4d00000-0000-0000-0000-000000000001",
+    type: "short_text" as const,
+    label: "Actor Name",
+    required: true,
+  },
+  {
+    id: "f4d00000-0000-0000-0000-000000000002",
+    type: "single_select" as const,
+    label: "Role Applying For",
+    required: true,
+    options: ["Lead", "Supporting", "Extra", "Stunt Double"],
+  },
+];
+
+const gameFormFields = [
+  {
+    id: "f5e00000-0000-0000-0000-000000000001",
+    type: "short_text" as const,
+    label: "Player Tag",
+    required: true,
+  },
+  {
+    id: "f5e00000-0000-0000-0000-000000000002",
+    type: "multi_select" as const,
+    label: "Preferred Genres",
+    required: true,
+    options: ["RPG", "FPS", "Strategy", "Puzzle"],
+  },
+];
+
+const eventFormFields = [
+  {
+    id: "f6f00000-0000-0000-0000-000000000001",
+    type: "short_text" as const,
+    label: "Your Name",
+    required: true,
+  },
+  {
+    id: "f6f00000-0000-0000-0000-000000000002",
+    type: "email" as const,
+    label: "Email Address",
+    required: true,
+  },
+];
+
 // ---------------------------------------------------------------------------
 // Main seed function
 // ---------------------------------------------------------------------------
@@ -357,6 +404,24 @@ async function seed() {
       description: "Pitch your startup idea and get community feedback to validate your concept.",
       theme: "startup" as const,
       fields: startupFormFields,
+    },
+    {
+      title: "Movie Casting Call Audition",
+      description: "Apply for roles in our upcoming indie feature film.",
+      theme: "movie" as const,
+      fields: movieFormFields,
+    },
+    {
+      title: "Game Beta Tester Application",
+      description: "Sign up to playtest our retro arcade game before launch.",
+      theme: "game" as const,
+      fields: gameFormFields,
+    },
+    {
+      title: "Community Meetup RSVP",
+      description: "Join us for our monthly indie creator gathering.",
+      theme: "event" as const,
+      fields: eventFormFields,
     },
   ];
 

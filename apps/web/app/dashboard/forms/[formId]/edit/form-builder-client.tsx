@@ -233,6 +233,7 @@ export function FormBuilderClient({ initialForm }: { initialForm: any }) {
             onDeleteField={handleDeleteField}
             onReorderFields={handleReorderFields}
             onAddField={() => handleAddField("short_text")}
+            theme={settings.theme}
           />
         </Panel>
 

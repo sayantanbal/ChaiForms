@@ -31,6 +31,7 @@ const PAGE_SIZE = 24;
 export default function ExplorePage() {
   const [page, setPage] = useState(1);
 
+  const { data: me } = trpc.auth.me.useQuery(undefined, { retry: false });
   const { data, isLoading } = trpc.explore.listPublicForms.useQuery({ page, pageSize: PAGE_SIZE });
 
   const forms = data?.items ?? [];
@@ -55,12 +56,21 @@ export default function ExplorePage() {
             <Link href="/pricing" className="text-gray-400 hover:text-white transition-colors">
               Pricing
             </Link>
-            <Link
-              href="/login"
-              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-lg transition-colors font-semibold"
-            >
-              Sign In
-            </Link>
+            {me ? (
+              <Link
+                href="/dashboard"
+                className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white font-bold transition-transform hover:scale-105 shadow-lg"
+              >
+                {me.fullName.charAt(0).toUpperCase()}
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-lg transition-colors font-semibold"
+              >
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       </nav>

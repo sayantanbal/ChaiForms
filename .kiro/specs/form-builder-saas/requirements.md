@@ -179,9 +179,22 @@ The existing `usersTable`, Google OAuth / Neon Auth client, tRPC router, and Sca
 
 ---
 
-### Requirement 4: Form Theme and Appearance
+### Requirement 4: Form Theme and Appearance (Immersive Theme Engine)
 
-*(Unchanged from original — see existing Requirement 4 acceptance criteria.)*
+**User Story:** As a Creator, I want to apply distinct, immersive themes to my forms (like a Startup pitch deck or a Retro OS) so that the entire presentation layer matches my brand or creative concept, not just the colors.
+
+#### Acceptance Criteria
+
+1. THE ChaiForms_Web SHALL implement a Component-Based Theme Registry architecture, avoiding reliance solely on global CSS variable swaps.
+2. THE Theme Registry SHALL provide distinct React Contexts/Wrappers for each supported theme in `formThemeEnum`, allowing themes to fully override structural DOM elements, layout behaviors, typography, and micro-interactions.
+3. THE Theme Registry SHALL support Theme-Specific Field Overrides. When a form uses the `os` theme, the registry must provide custom field components (e.g., `OsInput`, `OsCheckbox`) to the form renderer to radically alter field appearance (e.g., pixelated borders, retro 3D shadows).
+4. THE ChaiForms_Web SHALL implement the following core themes initially to prove the architecture:
+   - **Default:** Standard Radix UI + Tailwind defaults.
+   - **Startup/Tech Company:** Inspired by Notion/Linear (minimalist, clean `Geist`/`Inter` typography, soft shadows, floating inputs).
+   - **OS:** Inspired by Retro Windows XP (classic gray/blue window chrome, 3D borders, retro fonts).
+5. THE form builder canvas (`/dashboard/forms/{formId}/edit`) SHALL be a Full WYSIWYG Editor wrapped in the Theme Provider. As creators drop fields onto the canvas, they MUST render using the exact theme-specific field overrides and layouts that the respondent will see.
+6. THE public form renderer (`/f/{slug}`) SHALL wrap the form content in the selected Theme Wrapper.
+7. Creators SHALL NOT be able to arbitrarily customize granular theme tokens (e.g., changing just the button color in the OS theme); themes are highly opinionated, locked design systems.
 
 ---
 

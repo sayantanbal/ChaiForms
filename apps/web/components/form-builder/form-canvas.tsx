@@ -11,6 +11,7 @@ import {
 import { FieldSchemaUnion } from "@repo/schemas";
 import { FieldCard } from "./field-card";
 import { Plus } from "lucide-react";
+import { ThemeProvider } from "~/lib/theme-registry";
 
 interface FormCanvasProps {
   fields: FieldSchemaUnion[];
@@ -19,6 +20,7 @@ interface FormCanvasProps {
   onDeleteField: (id: string) => void;
   onReorderFields: (activeId: string, overId: string) => void;
   onAddField: () => void;
+  theme?: string | null;
 }
 
 export function FormCanvas({
@@ -27,15 +29,17 @@ export function FormCanvas({
   onSelectField,
   onDeleteField,
   onReorderFields,
-  onAddField
+  onAddField,
+  theme
 }: FormCanvasProps) {
   const { setNodeRef } = useDroppable({
     id: "form-canvas-droppable",
   });
 
   return (
-    <div ref={setNodeRef} className="flex-1 bg-muted/30 overflow-y-auto p-6 md:p-10 flex flex-col items-center">
-      <div className="w-full max-w-3xl flex flex-col gap-4">
+    <ThemeProvider theme={theme}>
+      <div ref={setNodeRef} className="flex-1 overflow-y-auto p-6 md:p-10 flex flex-col items-center">
+        <div className="w-full max-w-3xl flex flex-col gap-4 relative z-10">
         {fields.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-xl bg-card text-center">
             <h3 className="text-lg font-semibold mb-2 text-foreground">No fields yet</h3>
@@ -82,5 +86,6 @@ export function FormCanvas({
         )}
       </div>
     </div>
+    </ThemeProvider>
   );
 }

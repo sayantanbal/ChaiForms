@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "~/trpc/client";
 import type { FieldSchemaUnion } from "@repo/schemas";
-import { ThemedFormWrapper } from "~/components/form-renderer/themed-form-wrapper";
+import { ThemeProvider } from "~/lib/theme-registry";
 import { FormRenderer } from "~/components/form-renderer/form-renderer";
 import { resolveThemeKey } from "~/lib/themes";
 
@@ -62,50 +62,52 @@ export default function PreviewPage() {
       {/* Spacer to account for fixed banner */}
       <div className="h-10" />
 
-      <ThemedFormWrapper theme={resolveThemeKey(form.theme)}>
-        {/* Form title header */}
-        <div className="max-w-3xl mx-auto px-6 pt-12 pb-6 text-center">
-          <h1 className="text-3xl sm:text-4xl font-black text-[var(--form-text)] mb-3">
-            {form.title}
-          </h1>
-          {form.description && (
-            <p className="text-[var(--form-muted)] text-lg">{form.description}</p>
+      <ThemeProvider theme={resolveThemeKey(form.theme)}>
+        <div className="relative z-10">
+          {/* Form title header */}
+          <div className="max-w-3xl mx-auto px-6 pt-12 pb-6 text-center">
+            <h1 className="text-3xl sm:text-4xl font-black text-[var(--form-text)] mb-3">
+              {form.title}
+            </h1>
+            {form.description && (
+              <p className="text-[var(--form-muted)] text-lg">{form.description}</p>
+            )}
+          </div>
+
+          {fields.length === 0 ? (
+            <div className="max-w-3xl mx-auto px-6 py-16 text-center text-[var(--form-muted)]">
+              <div className="text-5xl mb-4">📋</div>
+              <p className="text-lg">No fields added yet. Go back to the builder to add some!</p>
+              <Link
+                href={`/dashboard/forms/${formId}/edit`}
+                className="inline-block mt-6 px-6 py-3 rounded-xl font-bold bg-[var(--form-primary)] text-[var(--form-primary-fg)] hover:opacity-90 transition-opacity"
+              >
+                Go to Builder
+              </Link>
+            </div>
+          ) : (
+            // Render the real FormRenderer in preview mode — submit button is visually disabled
+            // We wrap with a pointer-events overlay on the submit button to block actual submissions
+            <div className="relative">
+              <FormRenderer
+                formId={form.id}
+                fields={fields}
+                pages={pages}
+                thankyouMessage={form.thankyouMessage}
+                previewMode
+              />
+              {/* Overlay to block submit in preview */}
+              <style>{`
+                [data-preview-form] button[type=button]:last-of-type {
+                  opacity: 0.5;
+                  cursor: not-allowed;
+                  pointer-events: none;
+                }
+              `}</style>
+            </div>
           )}
         </div>
-
-        {fields.length === 0 ? (
-          <div className="max-w-3xl mx-auto px-6 py-16 text-center text-[var(--form-muted)]">
-            <div className="text-5xl mb-4">📋</div>
-            <p className="text-lg">No fields added yet. Go back to the builder to add some!</p>
-            <Link
-              href={`/dashboard/forms/${formId}/edit`}
-              className="inline-block mt-6 px-6 py-3 rounded-xl font-bold bg-[var(--form-primary)] text-[var(--form-primary-fg)] hover:opacity-90 transition-opacity"
-            >
-              Go to Builder
-            </Link>
-          </div>
-        ) : (
-          // Render the real FormRenderer in preview mode — submit button is visually disabled
-          // We wrap with a pointer-events overlay on the submit button to block actual submissions
-          <div className="relative">
-            <FormRenderer
-              formId={form.id}
-              fields={fields}
-              pages={pages}
-              thankyouMessage={form.thankyouMessage}
-              previewMode
-            />
-            {/* Overlay to block submit in preview */}
-            <style>{`
-              [data-preview-form] button[type=button]:last-of-type {
-                opacity: 0.5;
-                cursor: not-allowed;
-                pointer-events: none;
-              }
-            `}</style>
-          </div>
-        )}
-      </ThemedFormWrapper>
+      </ThemeProvider>
     </div>
   );
 }

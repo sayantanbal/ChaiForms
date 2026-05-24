@@ -1,6 +1,7 @@
 import React from "react";
 import { FieldSchemaUnion } from "@repo/schemas";
 import { cn } from "@/lib/utils";
+import { useThemeRegistry } from "~/lib/theme-registry";
 
 interface FieldRendererProps {
   field: FieldSchemaUnion;
@@ -38,14 +39,15 @@ function FieldError({ error, id }: { error?: string; id: string }) {
 }
 
 export function ShortTextField({ field, value, onChange, error }: FieldRendererProps) {
+  const { components } = useThemeRegistry();
   return (
     <div className="w-full">
       <FieldLabel field={field} />
-      <input
+      <components.Input
         id={field.id}
         type="text"
         value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e: any) => onChange(e.target.value)}
         placeholder={field.placeholder || "Type your answer here..."}
         aria-describedby={`${field.id}-desc ${field.id}-error`}
         aria-invalid={!!error}
@@ -61,13 +63,14 @@ export function ShortTextField({ field, value, onChange, error }: FieldRendererP
 }
 
 export function LongTextField({ field, value, onChange, error }: FieldRendererProps) {
+  const { components } = useThemeRegistry();
   return (
     <div className="w-full">
       <FieldLabel field={field} />
-      <textarea
+      <components.Textarea
         id={field.id}
         value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e: any) => onChange(e.target.value)}
         placeholder={field.placeholder || "Type your answer here..."}
         rows={4}
         aria-describedby={`${field.id}-desc ${field.id}-error`}
@@ -84,14 +87,15 @@ export function LongTextField({ field, value, onChange, error }: FieldRendererPr
 }
 
 export function EmailField({ field, value, onChange, error }: FieldRendererProps) {
+  const { components } = useThemeRegistry();
   return (
     <div className="w-full">
       <FieldLabel field={field} />
-      <input
+      <components.Input
         id={field.id}
         type="email"
         value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e: any) => onChange(e.target.value)}
         placeholder={field.placeholder || "name@example.com"}
         aria-describedby={`${field.id}-desc ${field.id}-error`}
         aria-invalid={!!error}
@@ -107,14 +111,15 @@ export function EmailField({ field, value, onChange, error }: FieldRendererProps
 }
 
 export function NumberField({ field, value, onChange, error }: FieldRendererProps) {
+  const { components } = useThemeRegistry();
   return (
     <div className="w-full">
       <FieldLabel field={field} />
-      <input
+      <components.Input
         id={field.id}
         type="number"
         value={value ?? ""}
-        onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
+        onChange={(e: any) => onChange(e.target.value ? Number(e.target.value) : undefined)}
         placeholder={field.placeholder || "0"}
         aria-describedby={`${field.id}-desc ${field.id}-error`}
         aria-invalid={!!error}
@@ -308,14 +313,15 @@ export function RatingField({ field, value, onChange, error }: FieldRendererProp
 }
 
 export function DateField({ field, value, onChange, error }: FieldRendererProps) {
+  const { components } = useThemeRegistry();
   return (
     <div className="w-full">
       <FieldLabel field={field} />
-      <input
+      <components.Input
         id={field.id}
         type="date"
         value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e: any) => onChange(e.target.value)}
         aria-describedby={`${field.id}-desc ${field.id}-error`}
         aria-invalid={!!error}
         aria-required={field.required}

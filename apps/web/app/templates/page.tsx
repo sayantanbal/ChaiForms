@@ -32,8 +32,16 @@ async function getTemplates() {
   }
 }
 
+async function getMe() {
+  try {
+    return await api.auth.me.query(undefined);
+  } catch {
+    return null;
+  }
+}
+
 export default async function TemplatesPage() {
-  const templates = await getTemplates();
+  const [templates, me] = await Promise.all([getTemplates(), getMe()]);
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -47,9 +55,18 @@ export default async function TemplatesPage() {
           <div className="flex items-center gap-4 text-sm">
             <Link href="/explore" className="text-gray-400 hover:text-white transition-colors">Explore</Link>
             <Link href="/pricing" className="text-gray-400 hover:text-white transition-colors">Pricing</Link>
-            <Link href="/login" className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-lg transition-colors font-semibold">
-              Sign In
-            </Link>
+            {me ? (
+              <Link
+                href="/dashboard"
+                className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white font-bold transition-transform hover:scale-105 shadow-lg"
+              >
+                {me.fullName.charAt(0).toUpperCase()}
+              </Link>
+            ) : (
+              <Link href="/login" className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-lg transition-colors font-semibold">
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       </nav>
@@ -89,9 +106,14 @@ export default async function TemplatesPage() {
                       {template.title}
                     </h2>
                     <p className="text-gray-400 text-sm line-clamp-2 mb-4">{template.description}</p>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mt-4">
                       <span className="text-xs text-gray-500">{(template.fields as unknown[]).length} fields</span>
-                      <UseTemplateButton templateId={template.id} gradient={gradient} />
+                      <div className="flex items-center gap-3">
+                        <Link href={`/templates/${template.id}`} className="text-sm font-semibold text-gray-300 hover:text-white transition-colors">
+                          Preview
+                        </Link>
+                        <UseTemplateButton templateId={template.id} gradient={gradient} />
+                      </div>
                     </div>
                   </div>
                 </div>

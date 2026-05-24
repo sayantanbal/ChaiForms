@@ -194,6 +194,40 @@ export const exploreRouter = router({
         createdAt: t.createdAt ? t.createdAt.toISOString() : null,
       }));
     }),
+
+  // -------------------------------------------------------------------------
+  // explore.getTemplateById
+  // -------------------------------------------------------------------------
+  getTemplateById: publicProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: getPath("/templates/{id}"),
+        tags: TAGS_TEMPLATES,
+      },
+    })
+    .input(z.object({ id: z.string().uuid() }))
+    .output(templateOutputSchema)
+    .query(async ({ input }) => {
+      const [template] = await db
+        .select()
+        .from(templatesTable)
+        .where(eq(templatesTable.id, input.id))
+        .limit(1);
+
+      if (!template) {
+        throw new Error("Template not found");
+      }
+
+      return {
+        id: template.id,
+        title: template.title,
+        description: template.description,
+        theme: template.theme,
+        fields: (template.fields as FieldSchemaUnion[]) ?? [],
+        createdAt: template.createdAt ? template.createdAt.toISOString() : null,
+      };
+    }),
 });
 
 export type ExploreRouter = typeof exploreRouter;

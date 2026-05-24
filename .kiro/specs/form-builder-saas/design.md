@@ -516,6 +516,42 @@ export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 ---
 
+## Immersive Theme Engine Architecture
+
+The form renderer and builder use a **Component-Based Theme Registry** to provide highly customized visual experiences that go beyond CSS variables. Each `formThemeEnum` value is mapped to a distinct React Context Wrapper.
+
+### React Context Registry
+
+```tsx
+// apps/web/lib/theme-registry.tsx
+export const ThemeContext = createContext<{
+  name: string;
+  components: {
+    Wrapper: React.ComponentType<{ children: React.ReactNode }>;
+    Input: React.ComponentType<any>;
+    Button: React.ComponentType<any>;
+    Card: React.ComponentType<any>;
+    Background: React.ComponentType<any>;
+  };
+}>({ /* default base theme */ });
+
+export function ThemeProvider({ theme, children }) {
+  const components = getThemeComponents(theme);
+  return (
+    <ThemeContext.Provider value={{ name: theme, components }}>
+       <components.Wrapper>
+         <components.Background />
+         {children}
+       </components.Wrapper>
+    </ThemeContext.Provider>
+  );
+}
+```
+
+This allows forms using the `os` theme to render retro, structural overrides (e.g. `OsInput`) while `startup` uses clean, floating components. The form builder canvas (`/dashboard/forms/[formId]/edit`) relies on this exact `ThemeProvider` so creators experience a 1:1 Live Preview while building.
+
+---
+
 ## CSRF Protection
 
 ### Strategy: HMAC-Signed Double-Submit Cookie (Hardened)
