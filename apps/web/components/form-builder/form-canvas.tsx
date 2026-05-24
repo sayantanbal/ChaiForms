@@ -38,7 +38,7 @@ export function FormCanvas({
 
   return (
     <ThemeProvider theme={theme}>
-      <div ref={setNodeRef} className="flex-1 overflow-y-auto p-6 md:p-10 flex flex-col items-center">
+      <div ref={setNodeRef} className="h-full overflow-y-auto p-6 md:p-10 flex flex-col items-center">
         <div className="w-full max-w-3xl flex flex-col gap-4 relative z-10">
         {fields.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-xl bg-card text-center">

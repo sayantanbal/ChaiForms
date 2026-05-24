@@ -61,7 +61,7 @@ export type DynamicOptionRuleType = z.infer<typeof dynamicOptionRuleSchema>;
 export const conditionalRuleSchema = singleRuleSchema;
 
 export const baseField = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   label: z.string().min(1),
   required: z.boolean().default(false),
   placeholder: z.string().optional(),

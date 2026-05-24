@@ -6,7 +6,7 @@ import { BaseThemeComponents } from "./BaseTheme";
 function Wrapper({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="min-h-screen w-full relative overflow-hidden"
+      className="h-full w-full relative"
       style={{ fontFamily: "'Calgary DEMO', sans-serif" }}
     >
       <style>{`
@@ -37,7 +37,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
       {/* Warm color overlay to ensure text contrast */}
       <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-b from-orange-900/40 to-pink-900/40 backdrop-blur-md" />
 
-      <div className="relative z-10 event-theme-scope text-[var(--form-text)]">
+      <div className="relative z-10 h-full event-theme-scope text-[var(--form-text)]">
         {children}
       </div>
     </div>

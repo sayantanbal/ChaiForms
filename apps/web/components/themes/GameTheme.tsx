@@ -6,7 +6,7 @@ import { BaseThemeComponents } from "./BaseTheme";
 function Wrapper({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="min-h-screen w-full relative overflow-hidden"
+      className="h-full w-full relative"
       style={{ fontFamily: "'Pixel Game', monospace" }}
     >
       <style>{`
@@ -37,7 +37,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
       {/* Scanlines overlay */}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-20" style={{ backgroundImage: "repeating-linear-gradient(transparent, transparent 2px, black 3px, black 3px)" }} />
 
-      <div className="relative z-10 game-theme-scope text-[var(--form-text)]">
+      <div className="relative z-10 h-full game-theme-scope text-[var(--form-text)]">
         {children}
       </div>
     </div>

@@ -4,10 +4,10 @@ import { FieldSchemaUnion } from "./fields/index.ts";
 export const slugPattern = /^[a-z0-9-]{3,60}$/;
 
 export const pageSchema = z.object({
-  id: z.uuid(),
+  id: z.string().min(1),
   title: z.string().min(1),
   order: z.number().int().min(0),
-  fieldIds: z.array(z.uuid()),
+  fieldIds: z.array(z.string().min(1)),
 });
 
 export const formSettingsSchema = z.object({

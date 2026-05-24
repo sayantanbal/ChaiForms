@@ -9,7 +9,7 @@ import { BaseThemeComponents } from "./BaseTheme";
 function Wrapper({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="min-h-screen w-full relative overflow-hidden"
+      className="h-full w-full relative"
       style={{
         fontFamily: "'Manga Temple', 'Comic Sans MS', cursive, sans-serif",
       }}
@@ -45,7 +45,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
       <div className="absolute inset-0 z-0 opacity-10 mix-blend-overlay pointer-events-none" 
            style={{ backgroundImage: "radial-gradient(#000 1px, transparent 1px)", backgroundSize: "4px 4px" }} />
 
-      <div className="relative z-10 anime-theme-scope">
+      <div className="relative z-10 h-full anime-theme-scope">
         {children}
       </div>
     </div>

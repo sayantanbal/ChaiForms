@@ -43,6 +43,11 @@ export function FormBuilderClient({ initialForm }: { initialForm: any }) {
   });
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"field" | "theme" | "settings">("field");
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const { debouncedSave, saveState } = useFormAutosave(initialForm.id);
 
@@ -121,7 +126,12 @@ export function FormBuilderClient({ initialForm }: { initialForm: any }) {
   const estimatedTime = Math.max(1, Math.ceil(fields.length * 0.5));
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      // Require pointer to move 8px before activating drag.
+      // This prevents clicks from accidentally triggering a drag
+      // and also fixes issues with sortable items that have onClick handlers.
+      activationConstraint: { distance: 8 },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -131,15 +141,23 @@ export function FormBuilderClient({ initialForm }: { initialForm: any }) {
     const { active, over } = event;
     if (!over) return;
 
-    if (active.data.current?.type === "field-type" && over.id === "form-canvas-droppable") {
+    // Dragging a field type FROM the palette — add it to the form.
+    // We check the dragged item's type, not over.id, because closestCenter
+    // resolves over.id to the nearest field card, not the droppable zone.
+    if (active.data.current?.type === "field-type") {
       handleAddField(active.data.current.fieldType);
       return;
     }
 
-    if (active.id !== over.id && !active.id.toString().startsWith("palette-")) {
+    // Reordering existing fields within the canvas
+    if (active.id !== over.id) {
       handleReorderFields(active.id as string, over.id as string);
     }
   };
+
+  if (!isMounted) {
+    return null; // Prevent dnd-kit hydration mismatch
+  }
 
   return (
     <DndContext 

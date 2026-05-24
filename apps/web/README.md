@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/create-next-app).
+# ChaiForms Web Application
 
-## Getting Started
+This is the frontend application for [ChaiForms](../../README.md), a Typeform-style form builder SaaS. It is built using Next.js 16 with the App Router, providing both the creator dashboard/builder and the public-facing form submission pages.
 
-First, run the development server:
+## Tech Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Framework:** [Next.js 16](https://nextjs.org/) (App Router)
+- **Styling:** [Tailwind CSS v4](https://tailwindcss.com/) & [shadcn/ui](https://ui.shadcn.com/)
+- **Data Fetching:** [tRPC](https://trpc.io/) React Query Client (`@trpc/react-query`)
+- **Drag & Drop:** [DnD Kit](https://dndkit.com/) (used in the form builder)
+- **Charts:** [Recharts](https://recharts.org/) (used in the analytics dashboard)
+- **Forms:** React Hook Form & Zod (via `@repo/schemas`)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Core Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Creator Dashboard (`/dashboard`)**: Analytics overview, form management, and responses data grid.
+- **Form Builder (`/dashboard/forms/[formId]/edit`)**: A three-panel layout featuring a drag-and-drop canvas to visually construct multi-page forms, configure conditional logic, and set form settings.
+- **Themed Form Renderer (`/f/[slug]`)**: The public-facing submission interface. Supports 8 rich themes (Anime, OS, Startup, Tech, etc.), responsive layouts, keyboard navigation, and conditional field logic.
+- **Authentication**: Integrates with the backend JWT and Neon Auth system. Implements route guards via Next.js Proxy/Middleware.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load Inter, a custom Google Font.
+## Key Directories
 
-## Learn More
+| Directory | Purpose |
+| --- | --- |
+| `app/` | Next.js App Router pages, layouts, and API routes. Includes `dashboard`, `auth`, `explore`, and the public `f/[slug]` routes. |
+| `components/` | React components organized into generic `ui/` (shadcn), `form-builder/`, `dashboard/`, and `themes/`. |
+| `lib/` | Utility functions, theme configurations, conditional logic engine, and TRPC client setup. |
+| `hooks/` | Custom React hooks (e.g., `use-form-autosave`, analytics websockets). |
+| `trpc/` | tRPC React Query client configuration and provider. |
 
-To learn more about Next.js, take a look at the following resources:
+## Available Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+From the `apps/web` directory (or via Turborepo from the root):
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `npm run dev` / `pnpm dev`: Starts the Next.js development server on `http://localhost:3000`.
+- `npm run build` / `pnpm build`: Builds the Next.js application for production.
+- `npm start` / `pnpm start`: Starts the production server.
+- `npm run lint` / `pnpm lint`: Runs ESLint.
+- `npm run check-types` / `pnpm check-types`: Runs TypeScript compiler checks and Next typegen.
+- `npm run test` / `pnpm test`: Runs Vitest test suite.
 
-## Deploy on Vercel
+## Environment Variables
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The web app relies on the following environment variables (typically provided via the monorepo root `.env`):
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `NEXT_PUBLIC_API_URL`: The URL of the ChaiForms API (e.g., `http://localhost:3001`).
+- `NEXT_PUBLIC_WEB_BASE_URL`: The base URL of this web app, used for generating shareable links and QR codes.
+- `NEXT_PUBLIC_ENABLE_DEMO_LOGIN`: (Optional) Set to `true` to display demo login bypass buttons.
+
+> **Note:** For full local development setup instructions, including database and backend API, please refer to the [monorepo root README](../../README.md).

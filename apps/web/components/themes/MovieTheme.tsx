@@ -6,7 +6,7 @@ import { BaseThemeComponents } from "./BaseTheme";
 function Wrapper({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="min-h-screen w-full relative overflow-hidden"
+      className="h-full w-full relative"
       style={{ fontFamily: "'Firlest', serif" }}
     >
       <style>{`
@@ -37,7 +37,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
       {/* Dark vignette overlay */}
       <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.8)_100%)]" />
 
-      <div className="relative z-10 movie-theme-scope text-[var(--form-text)]">
+      <div className="relative z-10 h-full movie-theme-scope text-[var(--form-text)]">
         {children}
       </div>
     </div>

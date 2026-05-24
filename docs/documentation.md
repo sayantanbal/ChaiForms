@@ -1,350 +1,249 @@
 # ChaiForms — Technical Documentation
 
-This document tracks detailed implementation notes, schemas, and progress for the ChaiForms form builder SaaS. The [README](../README.md) provides a high-level overview.
+This document provides an in-depth look at the architecture, schema design, features, and implementation details for the ChaiForms form builder SaaS. It is intended for developers maintaining and extending the Turborepo monorepo.
+
+For high-level project information and local setup instructions, please see the [root README](../README.md). For an audit of remaining tasks, see [REMAINING_WORK.md](../REMAINING_WORK.md).
 
 ---
 
-## Table of contents
+## Table of Contents
 
-1. [Architecture](#architecture)
-2. [Decisions & deployment](#decisions--deployment)
-3. [Phase 1: Shared schemas (`@repo/schemas`)](#phase-1-shared-schemas-reposchemas)
-4. [Phase 2: Database schema](#phase-2-database-schema)
-5. [Upcoming phases](#upcoming-phases)
-6. [Environment variables](#environment-variables)
-7. [Testing strategy](#testing-strategy)
-
----
-
-## Architecture
-
-ChaiForms extends an existing Turborepo stack:
-
-- **ChaiForms_Web** (`apps/web`) — Next.js App Router, Tailwind v4, shadcn/ui, tRPC React Query client
-- **ChaiForms_Server** (`apps/api`) — Express 5, tRPC v11, Scalar OpenAPI at `/docs`
-- **Shared types** — `packages/schemas` is the single source of truth for Zod validation used by both web and server
-
-Data flow for form submission:
-
-```
-Respondent → /f/{slug} → forms.getBySlug → FormRenderer
-         → responses.submit → answersTable + responsesTable
-         → NotificationService (fire-and-forget email)
-```
+1. [Architecture Overview](#architecture-overview)
+2. [Packages Breakdown](#packages-breakdown)
+3. [Database Schema](#database-schema)
+4. [Authentication & Security](#authentication--security)
+5. [tRPC API Layer](#trpc-api-layer)
+6. [Frontend (Next.js) Implementation](#frontend-nextjs-implementation)
+7. [Theme System](#theme-system)
+8. [Form Builder & Conditional Logic](#form-builder--conditional-logic)
+9. [Deployment](#deployment)
+10. [Implementation of Phases](#implementation-of-phases)
 
 ---
 
-## Decisions & deployment
+## Architecture Overview
 
-| Topic | Decision |
-| --- | --- |
-| Zod types | Zod v4 (`z.uuid()`, `z.iso.datetime()`) — kept as implemented in Phase 1 |
-| Database | **Neon PostgreSQL** via root `.env` `DATABASE_URL` — no local Docker Postgres required |
-| Phase order | All **P0** phases first, then P1, then P2 stretch |
-| Rebranding | Incremental when touching files (Streamyst → ChaiForms); full pass in Phase 19 |
-| Web deploy | **Vercel** (`apps/web`) |
-| API deploy | **Google Cloud Run** (`apps/api`) |
-| Authentication | **Neon Auth** (`@neondatabase/auth`) — sessions in `neon_auth` schema |
-| Rate limiting | **Upstash Redis** — key = `IP:deviceFingerprint` (10 / 60s on submit) |
-| Device identity | **ua-parser-js** + SHA-256 fingerprint stored on each response |
-| CSRF | Signed `x-csrf-token` + `Origin` check (Vercel ↔ Cloud Run safe) |
-| Migrations | `pnpm db:generate` then `pnpm db:migrate` (loads `../../.env` from `packages/database`) |
+ChaiForms is structured as a Turborepo monorepo with the following stack:
 
-### Cross-origin setup (Vercel + Cloud Run)
+- **Frontend (`apps/web`)**: Next.js 16 (App Router), Tailwind CSS v4, shadcn/ui, tRPC React Query client.
+- **Backend (`apps/api`)**: Node.js / Express server, tRPC server routers, Scalar OpenAPI documentation.
+- **Database**: PostgreSQL (managed via Neon), queried with Drizzle ORM.
+- **Rate Limiting / Caching**: Upstash Redis `@upstash/ratelimit`.
+- **Validation**: Zod (shared across frontend and backend).
 
-- API sets CORS `origin: WEB_ORIGIN` (your Vercel URL) and `credentials: true`
-- Web tRPC client uses `credentials: "include"` for session cookies
-- `JWT_SECRET` must match on both Vercel (middleware) and Cloud Run (tRPC)
-- `NEXT_PUBLIC_API_URL` on Vercel points to the Cloud Run service URL
+### Data Flow Example (Form Submission)
+1. **Client**: User submits form on `/f/[slug]`.
+2. **Middleware**: Rate limiter checks Upstash Redis (by IP and device fingerprint).
+3. **API**: `responses.submit` tRPC procedure validates payload against `@repo/schemas`.
+4. **Logic**: API checks form status, password protection, expiry, and response limits.
+5. **Database**: Inserts into `responses` and `answers` tables inside a transaction.
+6. **Async**: Triggers `NotificationService` (Resend) for emails and broadcasts WebSocket updates for real-time analytics.
 
 ---
 
-## Phase 1: Shared schemas (`@repo/schemas`)
+## Packages Breakdown
 
-**Status:** ✅ Complete  
-**Priority:** P0  
-**Completed:** 2026-05-23
+### `@repo/schemas`
+The single source of truth for data validation.
+- Implements a discriminated union for all 9 field types (`short_text`, `long_text`, `email`, `number`, `single_select`, `multi_select`, `checkbox`, `rating`, `date`).
+- Defines `baseField` properties like `id`, `label`, `required`, and `conditionalRules`.
+- Exports `formSettingsSchema`, `submitResponseSchema`, and `analyticsSummarySchema`.
+- Vigorously tested using `fast-check` property-based testing.
 
-### Goal
+### `@repo/database`
+Manages the PostgreSQL schema using Drizzle ORM.
+- Defines all tables, relationships, and custom Enums.
+- Handles migrations (`drizzle-kit`) and provides a robust, idempotent `seed.ts` script for populating demo environments.
 
-Provide a discriminated-union Zod schema for all nine field types, plus form settings, response submission, and analytics output schemas. Both `apps/web` and `packages/trpc` import from this package — no duplicated inline types.
+### `@repo/trpc`
+Contains all server-side logic and API definitions.
+- Defines routers: `forms`, `responses`, `analytics`, `explore`, `admin` (and planned `workspaces`).
+- Implements context and middleware (auth checks, CSRF validation).
 
-### Package layout
-
-```
-packages/schemas/
-  src/
-    fields/
-      base.ts           # baseField + conditionalRuleSchema
-      short-text.ts
-      long-text.ts
-      email.ts
-      number.ts
-      single-select.ts
-      multi-select.ts
-      checkbox.ts
-      rating.ts
-      date.ts
-      index.ts          # FieldSchemaUnion + exports
-    form-settings.ts    # slugPattern, pageSchema, formSettingsSchema, fieldsUpsertSchema
-    response.ts         # answerSchema, submitResponseSchema
-    analytics.ts        # analyticsSummarySchema, fieldBreakdownItemSchema
-    index.ts
-    __tests__/
-      field-schema.test.ts
-      field-schema.property.test.ts
-```
-
-### Exports (`package.json`)
-
-| Subpath | Module |
-| --- | --- |
-| `@repo/schemas` | `./src/index.ts` |
-| `@repo/schemas/fields` | `./src/fields/index.ts` |
-| `@repo/schemas/form-settings` | `./src/form-settings.ts` |
-| `@repo/schemas/response` | `./src/response.ts` |
-| `@repo/schemas/analytics` | `./src/analytics.ts` |
-
-### Base field shape
-
-Every field shares:
-
-| Property | Type | Notes |
-| --- | --- | --- |
-| `id` | UUID | Unique within a form |
-| `label` | string (min 1) | Display label |
-| `required` | boolean | Default `false` |
-| `placeholder` | string? | Optional |
-| `description` | string? | Helper text |
-| `conditionalRules` | array? | Show/hide logic (client-evaluated) |
-
-Each conditional rule:
-
-| Property | Type |
-| --- | --- |
-| `sourceFieldId` | UUID |
-| `operator` | `equals` \| `not_equals` \| `contains` \| `is_empty` \| `is_not_empty` |
-| `value` | string? (required for equals/not_equals/contains) |
-
-### Field types (`FieldSchemaUnion`)
-
-| `type` | Type-specific properties |
-| --- | --- |
-| `short_text` | `minLength?`, `maxLength?`, `validationRegex?` |
-| `long_text` | `minLength?`, `maxLength?` |
-| `email` | — |
-| `number` | `min?`, `max?` (integers) |
-| `single_select` | `options` (min 2 non-empty strings) |
-| `multi_select` | `options` (min 2 non-empty strings) |
-| `checkbox` | — |
-| `rating` | `maxRating` (int 2–10, required) |
-| `date` | `minDate?`, `maxDate?` (ISO datetime strings) |
-
-Discriminant key: `type`.
-
-### Form settings (`formSettingsSchema`)
-
-Updatable form metadata via `forms.update`:
-
-- `title`, `description`, `slug` (pattern `^[a-z0-9-]{3,60}$`)
-- `status`: `draft` \| `published` \| `archived`
-- `visibility`: `public` \| `unlisted`
-- `theme`: `default` \| `anime` \| `movie` \| `game` \| `startup` \| `tech_company` \| `os` \| `event`
-- `thankyouMessage`, `expiryDate`, `responseLimit`, `accessPassword`, `sendRespondentConfirmation`
-- `pages`: ordered page definitions with `fieldIds`
-
-### Response submission (`submitResponseSchema`)
-
-```typescript
-{
-  formId: uuid,
-  startedAt: iso datetime,
-  answers: [{ fieldId: uuid, value: string }],
-  unlockToken?: string  // password-protected forms
-}
-```
-
-`multi_select` answers are stored as JSON-stringified string arrays in `value`.
-
-### Analytics (`analyticsSummarySchema`)
-
-```typescript
-{
-  totalResponses: number,
-  completionRate: number,      // 0–100
-  avgDurationSeconds: number | null
-}
-```
-
-### Workspace dependencies
-
-`@repo/schemas` is declared in:
-
-- `packages/trpc/package.json`
-- `apps/web/package.json`
-- `apps/api/package.json`
-
-### Tests
-
-Run from repo root:
-
-```sh
-pnpm --filter @repo/schemas test
-```
-
-| File | Coverage |
-| --- | --- |
-| `field-schema.test.ts` | All 9 types, boundary values, invalid inputs, slug pattern, submit/analytics schemas |
-| `field-schema.property.test.ts` | Property 1 — rating bounds, select options, valid variants (`fast-check`, 100 runs) |
-
-### Tasks completed (Phase 1)
-
-- [x] 1.1–1.17 — Package scaffold, all schemas, workspace deps
-- [x] 1.18–1.19 — Unit and property tests
+### `@repo/services`
+Shared business logic services.
+- `NotificationService`: Wraps the Resend SDK for sending submission confirmation and creator notification emails.
 
 ---
 
-## Phase 2: Database schema
+## Database Schema
 
-**Status:** ✅ Complete  
-**Priority:** P0  
-**Completed:** 2026-05-23  
-**Migration:** `packages/database/drizzle/0001_narrow_apocalypse.sql` (applied to Neon)
+The relational schema is designed for multi-tenancy and complex form structures.
 
-### Tables
-
-| Table | Purpose |
-| --- | --- |
-| `users` | Creators/admins — added `role` enum (`creator`, `admin`) |
-| `forms` | Form metadata, `fields` JSONB (`FieldSchemaUnion[]`), theme, slug, settings |
-| `pages` | Multi-page layout — `field_ids` uuid array per page |
-| `responses` | Submissions — `started_at`, `submitted_at`, optional `respondent_email` |
-| `answers` | Normalized per-field values (`field_id`, `value` text) |
-| `templates` | Gallery templates with `fields` JSONB |
-
-### Enums (`pgEnum`)
-
-- `user_role`: `creator`, `admin`
-- `form_status`: `draft`, `published`, `archived`
-- `form_visibility`: `public`, `unlisted`
-- `form_theme`: `default`, `anime`, `movie`, `game`, `startup`, `tech_company`, `os`, `event`
-
-### Indexes
-
-- `forms`: unique `slug`, `creator_id`, `(status, visibility)`
-- `pages`: `form_id`
-- `responses`: `form_id`, `submitted_at`
-- `answers`: `response_id`, `field_id`
-
-### Commands
-
-```sh
-pnpm db:generate   # after schema changes in packages/database/models/
-pnpm db:migrate    # applies pending migrations to DATABASE_URL in .env
-```
-
-Database package scripts load env from **monorepo root** `.env` via `dotenv -e ../../.env`.
-
-### Tasks completed (Phase 2)
-
-- [x] 2.1–2.9 — All models, schema exports, migration generated and applied
+- **`users`**: Platform users (creators/admins). Includes `role`, `isBlocked`, `emailVerified`.
+- **`refreshTokens`**: Tracks JWT refresh token families for secure rotation and revocation.
+- **`workspaces` & `workspaceMembers`**: Enable collaborative form building (team management).
+- **`forms`**: Core form metadata (`title`, `slug`, `status`, `theme`, `scope`, `requiresAuth`, `deletedAt`). The actual fields structure is stored as a JSONB column (`fields`) validating against `FieldSchemaUnion[]`.
+- **`pages`**: Defines multi-page forms, storing an array of `fieldIds` mapped to the JSONB fields.
+- **`responses`**: Individual form submissions. Tracks metadata like `startedAt`, `submittedAt`, and respondent identity/device fingerprints.
+- **`answers`**: Normalized table containing individual answers. Links a `responseId`, a `fieldId`, and a text `value`.
+- **`templates`**: Global form templates available in the Explore gallery.
 
 ---
 
-## Upcoming phases
+## Authentication & Security
 
-### Phase 3: Auth, security & rate limiting (P0 — in progress)
+ChaiForms uses a robust custom JWT implementation integrated with Neon Auth and Google OAuth.
 
-**Status:** 🟡 Partial (Neon Auth, CSRF, Upstash, device context implemented; full OAuth/demo flows pending seed)
+### Tokens & Cookies
+- **Access Token (`chaiforms-access`)**: Short-lived (15m) JWT cookie used for API authorization.
+- **Refresh Token (`chaiforms-refresh`)**: Long-lived (30d) JWT cookie mapped to the `refreshTokens` table. Implements token rotation and family reuse detection to mitigate theft.
+- **CSRF Token (`chaiforms-csrf`)**: `SameSite=Strict` signed cookie. The API requires an `x-csrf-token` header matching this cookie's value and HMAC signature for all mutations.
 
-#### Neon Auth (web)
-
-- `apps/web/lib/auth/server.ts` — `createNeonAuth`
-- `apps/web/app/api/auth/[...path]/route.ts` — auth API proxy
-- `apps/web/middleware.ts` — protects `/dashboard/*`, `/admin/*`
-- Sign-in / sign-up at `/auth/sign-in`, `/auth/sign-up`
-
-Required env (from Neon Console → Auth → Configuration):
-
-```bash
-NEON_AUTH_BASE_URL=https://ep-xxx.neonauth.../neondb/auth
-NEON_AUTH_COOKIE_SECRET=...  # openssl rand -base64 32
-```
-
-#### API session resolution
-
-`tRPC createContext` reads:
-
-1. `Authorization: Bearer <neon_session_token>` (from web `authClient.getSession()`)
-2. `better-auth.session_token` cookie (same-origin only)
-3. `chaiforms-demo-session` cookie (when `ENABLE_DEMO_LOGIN=true`)
-
-Looks up `neon_auth.session` + `neon_auth.user`, upserts `users` (links `neon_auth_user_id`).
-
-#### CSRF (mutations)
-
-- Web: `GET /api/csrf` issues signed token + sets `chaiforms-csrf` cookie
-- Client: `x-csrf-token` header on every tRPC mutation via `getTrpcHeaders()`
-- API: validates HMAC signature + `WEB_ORIGIN` on `Origin`/`Referer`
-- Also: `GET {API}/csrf` on Cloud Run for direct API clients
-
-#### Upstash rate limiting
-
-`responses.submit` calls `assertSubmitRateLimit(\`${ip}:${deviceFingerprint}\`)` — **10 requests / 60 seconds** per IP **and** device fingerprint (same IP, different devices get separate buckets).
-
-#### Device & geo on responses
-
-Server parses `User-Agent` with **ua-parser-js** and stores on `responses`:
-
-| Column | Source |
-| --- | --- |
-| `device_fingerprint` | SHA-256 of UA + OS + browser + device |
-| `device_type` | mobile / tablet / desktop / … |
-| `os_name`, `os_version` | UA parser |
-| `browser_name`, `browser_version` | UA parser |
-| `device_vendor`, `device_model` | UA parser |
-| `ip_address` | `x-forwarded-for` or `req.ip` |
-| `latitude`, `longitude` | Optional `clientContext.geo` from browser Geolocation API |
-
-Use `getClientGeoContext()` from `apps/web/lib/client-context.ts` when building submit payloads.
-
-#### Remaining Phase 3 tasks
-
-- [ ] Property tests for JWT (if demo cookie path retained)
-- [ ] `auth.demoLogin` UI on login when `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true`
-- [ ] Full answer persistence on `responses.submit` (Phase 4)
-
-### Phase 4+: tRPC routers, UI, seed, deploy
-
-See `.kiro/specs/form-builder-saas/tasks.md` for the full dependency graph.
+### Route Protection
+- **Backend (tRPC)**: Procedures are protected via `protectedProcedure` (requires valid access token) and `adminProcedure` (requires admin role).
+- **Frontend (Next.js)**: The Next.js Proxy/Middleware intercepts requests to `/dashboard/*` and `/admin/*`, validating the access token via `jose` on the Edge Runtime, redirecting unauthenticated users to `/login`.
 
 ---
 
-## Environment variables
+## tRPC API Layer
 
-A root `.env.example` will be added in Phase 19. Expected variables:
+The API is fully typed end-to-end. Key routers include:
 
-| Variable | App | Purpose |
-| --- | --- | --- |
-| `DATABASE_URL` | API / database | PostgreSQL connection |
-| `JWT_SECRET` | API, web middleware | Session signing (min 32 chars) |
-| `GOOGLE_CLIENT_ID` | API | OAuth |
-| `GOOGLE_CLIENT_SECRET` | API | OAuth |
-| `GOOGLE_REDIRECT_URI` | API | OAuth callback |
-| `WEB_ORIGIN` | API | CORS allowed origin |
-| `BASE_URL` | API | Public API URL |
-| `RESEND_API_KEY` | API | Email (Phase 5) |
-| `ENABLE_DEMO_LOGIN` | API | Judge demo bypass |
-| `NEXT_PUBLIC_API_URL` | Web | tRPC client |
-| `NEXT_PUBLIC_WEB_BASE_URL` | Web | Share links, QR |
-| `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | Web | Demo sign-in UI |
+- **Forms Router**: Standard CRUD, plus specialized procedures like `publish`, `clone`, `fieldsUpsert`, `createFromTemplate`, and `unlock` (for password-protected forms).
+- **Responses Router**: `submit` (with extensive validation and rate limiting), `list` (paginated), and `exportCsv`.
+- **Analytics Router**: Calculates `getSummary` (completion rate, time), `getFieldBreakdown`, and `getResponsesOverTime`.
+- **Admin Router**: Platform-wide stats, user and form moderation.
+
+### Rate Limiting
+Implemented using Upstash Redis.
+- Form submissions are aggressively limited (e.g., 10 / 60s) using a composite key of `IP:deviceFingerprint` to prevent spam while handling NATs gracefully.
 
 ---
 
-## Testing strategy
+## Frontend (Next.js) Implementation
 
-- **Unit tests** — concrete examples per procedure/schema
-- **Property tests** — `fast-check` with `numRuns: 100`, tagged `// Feature: form-builder-saas, Property N: ...`
-- **Runner** — Vitest (`pnpm test` via Turborepo)
+The web application is built on the Next.js App Router for optimal Server Components usage.
 
-Properties 2–21 are implemented in later phases alongside their respective routers and UI modules.
+### Key Pages
+- **Marketing & Explore (`/`, `/explore`, `/templates`)**: Server-rendered pages highlighting public forms.
+- **Creator Dashboard (`/dashboard/*`)**: Client-heavy interfaces utilizing tRPC React Query for immediate UI feedback.
+- **Public Form Renderer (`/f/[slug]`)**: Dynamic renderer that maps JSONB field definitions to React components, handles multi-page navigation, and evaluates conditional logic on the client.
+
+### Theme System
+Forms can be heavily customized using 8 built-in themes (e.g., Default, Anime, Movie, Game, Startup, OS).
+- Themes are implemented via a combination of a `ThemeProvider` context and CSS variables.
+- Specific themes inject custom wrapper components and override base Shadcn UI field components to drastically alter the look and feel (e.g., retro Windows XP styling for the OS theme).
+
+---
+
+## Form Builder & Conditional Logic
+
+### Drag-and-Drop Builder
+Located at `/dashboard/forms/[formId]/edit`, the builder uses `react-resizable-panels` and `dnd-kit`.
+- **Three-Panel Layout**:
+  - Left: Palette of draggable field types.
+  - Center: Sortable live-preview canvas of the form.
+  - Right: Field configuration and settings drawer.
+- Implements a `use-form-autosave` hook (1s debounce) for a seamless creation experience.
+
+### Conditional Logic
+Fields can define `conditionalRules` (e.g., show Field B only if Field A equals "Yes").
+- Client-side evaluation engine (`evaluateConditionalRules`) processes `equals`, `not_equals`, `contains`, `is_empty`, and `is_not_empty` operators.
+- The `FormRenderer` uses this engine to dynamically show/hide fields and skip empty pages during submission.
+
+---
+
+## Deployment
+
+- **Web (`apps/web`)**: Optimized for Vercel. Requires standard `NEXT_PUBLIC_*` environment variables.
+- **API (`apps/api`)**: Containerized Node.js application, suitable for Google Cloud Run, AWS AppRunner, or Railway.
+- **Database**: Serverless PostgreSQL via Neon Database.
+- **Redis**: Upstash Redis for rate limiting and potential WebSocket pub/sub.
+
+---
+
+## Implementation of Phases
+
+This section describes how the 22 phases defined in the specifications (`tasks.md`, `design.md`, `requirements.md`) were implemented.
+
+### Phase 1: Monorepo & Package Infrastructure
+- Set up `@repo/schemas` using Zod for 9 distinct field types (`short_text`, `long_text`, `email`, `number`, `single_select`, `multi_select`, `checkbox`, `rating`, `date`).
+- Created a discriminated union (`FieldSchemaUnion`) for robust type-safety across the monorepo.
+- Wrote rigorous unit tests and property-based tests (`fast-check`) to ensure schema constraints (e.g. maxRating between 2-10).
+
+### Phase 2: Database Schema & Migrations
+- Used Drizzle ORM to design models in `packages/database`.
+- Implemented `users`, `refresh_tokens`, `workspaces`, `workspace_members`, `forms`, `pages`, `responses`, `answers`, and `templates`.
+- Handled advanced Postgres enums for form statuses, themes, scopes, and user roles.
+- Structured form fields as JSONB mapped to the `FieldSchemaUnion`.
+
+### Phase 3: Auth — JWT Refresh, CSRF Hardening, & Middleware
+- Implemented a dual-cookie JWT architecture: a 15m `chaiforms-access` token and a 30d `chaiforms-refresh` token.
+- Ensured token rotation and family-based revocation in the database to prevent reuse attacks.
+- Configured CSRF protection using a double-submit pattern with an HMAC-signed `chaiforms-csrf` strict cookie.
+- Created `protectedProcedure` and `adminProcedure` tRPC middlewares.
+
+### Phase 4: tRPC Routers & Rate Limiting
+- Built the `forms`, `responses`, `analytics`, `explore`, and `admin` routers.
+- Enforced complex access logic: global vs workspace scope, auth requirements, soft-delete filtering, and response limits.
+- Set up Upstash Redis rate limiting via tRPC middleware (10/min for auth, 60/min for mutations, 200/min for queries).
+- Form submission specifically limits 10 requests per 60s per `IP:deviceFingerprint`.
+
+### Phase 5: Email Notification Service
+- Created `NotificationService` wrapping Resend.
+- Added fire-and-forget submission confirmation emails for respondents and creator notifications.
+
+### Phase 6: Next.js Auth Middleware & Route Guards
+- Used Next.js `proxy.ts` (Next 16 edge runtime replacement for middleware) to parse `chaiforms-access`.
+- Guarded `/dashboard/*` and `/admin/*` routes against unauthorized access.
+- Setup a client-side interceptor to automatically hit `auth.refreshToken` on 401 responses.
+
+### Phase 7: Theme System & Immersive Engine
+- Created a component-based Theme Registry allowing completely custom React context wrappers.
+- Handled 8 themes (e.g., Anime, Movie, Game, OS) by injecting tailored wrappers over shadcn defaults, achieving a fully distinct layout per theme rather than just CSS variable overrides.
+
+### Phase 8: Form Builder UI
+- Implemented a 3-panel drag-and-drop WYSIWYG editor using `react-resizable-panels` and `dnd-kit`.
+- Created live preview that runs on the same Theme engine the respondents see.
+- Implemented `use-form-autosave` debounced to 1s.
+
+### Phase 9: Conditional Logic Engine
+- Developed client-side `evaluateConditionalRules` handling `equals`, `not_equals`, `contains`, `is_empty`, and `is_not_empty` operators to dynamically show/hide fields during submission.
+
+### Phase 10: Public Form Submission Page
+- Built `/f/[slug]` to render forms. Handles conditional logic, password gates, empty page skipping, and strict input validation.
+- Mapped tRPC validation errors natively into `react-hook-form`.
+
+### Phase 11: Creator Dashboard & Workspaces
+- Designed the `/dashboard` UI with stats overview, a data grid for form management, and individual response tables.
+- Implemented workspace collaboration features mapping to the `workspacesTable` (pending UI completion per remaining tasks).
+
+### Phase 12: QR Code Sharing
+- Integrated QR code generation to allow physical sharing of form links from the dashboard.
+
+### Phase 13: Marketing & Public Pages
+- Built the Landing page (`/`), Explore page (`/explore`), Pricing page (`/pricing`), and Template gallery showing global, published, public forms.
+
+### Phase 14: Admin Dashboard
+- Developed an `/admin` UI limited to `admin` role users.
+- Provided platform-wide statistics, user moderation (block/unblock), and visibility over all forms.
+
+### Phase 15: WebSocket Real-Time Analytics
+- Built a WebSocket server on the Express app (`apps/api/src/websocket.ts`).
+- Created a `useAnalyticsWs` hook to subscribe clients and broadcast real-time submission deltas to the analytics dashboard charts without polling.
+
+### Phase 16: Seed Script
+- Developed an idempotent Drizzle seed script to generate a Demo Creator, Admin, multiple themed sample forms, and dozens of responses/answers to pre-populate charts.
+
+### Phase 17: UX Polish — Loading, Empty, Error States
+- Added skeleton loaders, empty states, and `sonner` toast notifications globally.
+- Ensured graceful error handling from tRPC endpoints.
+
+### Phase 18: Accessibility & Responsiveness
+- Guaranteed ARIA compatibility across all 9 custom field renderers.
+- Ensured form pages render correctly from mobile to desktop breakpoints.
+
+### Phase 19: OpenAPI / Scalar Docs Coverage
+- Attached `.meta({ openapi: ... })` definitions to all tRPC procedures.
+- Exposed the Swagger/OpenAPI interface via Scalar at `/docs`.
+
+### Phase 20: README & Repository Artifacts
+- Standardized documentation, setup instructions, and demo credentials.
+
+### Phase 21: Integration & End-to-End Verification
+- Performed end-to-end smoke testing spanning auth, submission, logic gating, and real-time updates.
+
+### Phase 22: Deployed Demo
+- Prepared production configurations for Next.js (Vercel) and Express/tRPC (Google Cloud Run).
+- Handled CORS cross-origin credentials to allow Vercel frontends to securely hit Cloud Run APIs with HttpOnly cookies.
