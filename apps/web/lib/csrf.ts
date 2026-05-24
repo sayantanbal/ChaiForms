@@ -1,12 +1,10 @@
-import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from "@repo/trpc/server";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from "@repo/trpc/shared/csrf";
 
 let cachedToken: string | null = null;
 
 export function getCsrfTokenFromDocumentCookie(): string | null {
   if (typeof document === "undefined") return null;
-  const match = document.cookie.match(
-    new RegExp(`(?:^|; )${CSRF_COOKIE_NAME}=([^;]*)`),
-  );
+  const match = document.cookie.match(new RegExp(`(?:^|; )${CSRF_COOKIE_NAME}=([^;]*)`));
   return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 

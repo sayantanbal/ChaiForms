@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CSRF_COOKIE_NAME } from "@repo/trpc/server";
+import { CSRF_COOKIE_NAME } from "@repo/trpc/shared/csrf";
 
 export type AnalyticsDelta = {
   responseId?: string;
@@ -9,8 +9,7 @@ export type AnalyticsDelta = {
 };
 
 function getWsBaseUrl(): string {
-  const apiUrl =
-    process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
   const url = new URL(apiUrl);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   return url.origin;
@@ -18,9 +17,7 @@ function getWsBaseUrl(): string {
 
 function readCsrfCookie(): string | undefined {
   if (typeof document === "undefined") return undefined;
-  const match = document.cookie.match(
-    new RegExp(`(?:^|; )${CSRF_COOKIE_NAME}=([^;]*)`),
-  );
+  const match = document.cookie.match(new RegExp(`(?:^|; )${CSRF_COOKIE_NAME}=([^;]*)`));
   return match?.[1] ? decodeURIComponent(match[1]) : undefined;
 }
 

@@ -1,17 +1,15 @@
 import { httpLink, httpBatchStreamLink } from "@repo/trpc/client";
-import { env } from "~/env.js";
 import { getTrpcHeaders } from "~/lib/csrf";
 
 interface CreateTRPCHttpBatchClientClientOpts {
   enableStreaming?: boolean;
 }
 
-export const createTRPCHttpBatchClientClient = (
-  opts?: CreateTRPCHttpBatchClientClientOpts,
-) => {
+export const createTRPCHttpBatchClientClient = (opts?: CreateTRPCHttpBatchClientClientOpts) => {
   const c = opts?.enableStreaming ? httpBatchStreamLink : httpLink;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
   return c({
-    url: `${env.NEXT_PUBLIC_API_URL}/trpc`,
+    url: `${apiUrl}/trpc`,
     async headers() {
       return getTrpcHeaders();
     },

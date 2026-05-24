@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node dist/index.js",
-    "dev": "dotenv -- tsx watch ./src/index.ts",
+    "start": "dotenv -e ../../.env -- node dist/index.js",
+    "dev": "dotenv -e ../../.env -- tsx watch ./src/index.ts",
     "test": "vitest run",
     "build": "tsup",
     "lint": "eslint src/*"
@@ -32,6 +32,7 @@
     "@repo/trpc": "workspace:*",
     "@scalar/express-api-reference": "^0.8.30",
     "@trpc/server": "^11.8.1",
+    "dotenv": "^17.2.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "express": "^5.2.1",

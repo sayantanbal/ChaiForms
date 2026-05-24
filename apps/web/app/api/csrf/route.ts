@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createCsrfToken, CSRF_COOKIE_NAME, csrfCookieOptions } from "@repo/trpc/server";
+import { createCsrfToken, csrfCookieOptions } from "@repo/trpc/server";
+import { CSRF_COOKIE_NAME } from "@repo/trpc/shared/csrf";
 
 export async function GET() {
   const token = createCsrfToken();

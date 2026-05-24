@@ -4,7 +4,7 @@
  *
  * Run via: pnpm db:seed
  */
-import "dotenv/config";
+import "./load-env";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";

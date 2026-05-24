@@ -1,14 +1,10 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { TRPCError } from "@trpc/server";
-
-export const CSRF_COOKIE_NAME = "chaiforms-csrf";
-export const CSRF_HEADER_NAME = "x-csrf-token";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from "../../shared/csrf";
 
 function getCsrfSecret(): string {
   const secret =
-    process.env.CSRF_SECRET ??
-    process.env.JWT_SECRET ??
-    process.env.NEON_AUTH_COOKIE_SECRET;
+    process.env.CSRF_SECRET ?? process.env.JWT_SECRET ?? process.env.NEON_AUTH_COOKIE_SECRET;
   if (!secret || secret.length < 32) {
     throw new Error(
       "CSRF_SECRET, JWT_SECRET, or NEON_AUTH_COOKIE_SECRET (min 32 chars) is required",
@@ -19,18 +15,14 @@ function getCsrfSecret(): string {
 
 export function createCsrfToken(): string {
   const raw = randomBytes(24).toString("hex");
-  const signature = createHmac("sha256", getCsrfSecret())
-    .update(raw)
-    .digest("hex");
+  const signature = createHmac("sha256", getCsrfSecret()).update(raw).digest("hex");
   return `${raw}.${signature}`;
 }
 
 function isValidCsrfToken(token: string): boolean {
   const [raw, signature] = token.split(".");
   if (!raw || !signature) return false;
-  const expected = createHmac("sha256", getCsrfSecret())
-    .update(raw)
-    .digest("hex");
+  const expected = createHmac("sha256", getCsrfSecret()).update(raw).digest("hex");
   try {
     return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
   } catch {
@@ -38,9 +30,7 @@ function isValidCsrfToken(token: string): boolean {
   }
 }
 
-function assertAllowedOrigin(
-  headers: Record<string, string | string[] | undefined>,
-): void {
+function assertAllowedOrigin(headers: Record<string, string | string[] | undefined>): void {
   const webOrigin = process.env.WEB_ORIGIN;
   if (!webOrigin) return;
 
@@ -72,8 +62,7 @@ export function assertCsrf(req: {
   csrfToken?: string;
 }): void {
   const method = (req.method ?? "GET").toUpperCase();
-  const isSafeMethod =
-    method === "GET" || method === "HEAD" || method === "OPTIONS";
+  const isSafeMethod = method === "GET" || method === "HEAD" || method === "OPTIONS";
   if (isSafeMethod && !req.csrfToken) {
     return;
   }
