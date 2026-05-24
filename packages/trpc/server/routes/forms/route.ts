@@ -48,6 +48,14 @@ function trashRecoveryCutoff(): Date {
 // ---------------------------------------------------------------------------
 // Output schemas
 // ---------------------------------------------------------------------------
+const pageOutputSchema = z.object({
+  id: z.string().uuid(),
+  formId: z.string().uuid(),
+  title: z.string(),
+  order: z.number().int(),
+  fieldIds: z.array(z.string().uuid()),
+});
+
 export const formOutputSchema = z.object({
   id: z.string().uuid(),
   creatorId: z.string().uuid(),
@@ -75,6 +83,7 @@ export const formOutputSchema = z.object({
   scope: z.enum(["global", "workspace"]),
   workspaceId: z.string().uuid().nullable(),
   requiresAuth: z.boolean(),
+  pages: z.array(pageOutputSchema).optional(),
   deletedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime().nullable(),
   updatedAt: z.string().datetime().nullable(),
@@ -282,9 +291,14 @@ export const formsRouter = router({
       }
 
       const mapped = mapForm(form);
+      const pages = await db
+        .select()
+        .from(pagesTable)
+        .where(eq(pagesTable.formId, form.id))
+        .orderBy(pagesTable.order);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { creatorId: _creatorId, ...pub } = mapped;
-      return pub;
+      return { ...pub, pages };
     }),
 
   // -------------------------------------------------------------------------
@@ -904,15 +918,7 @@ export const formsRouter = router({
     })
     .input(z.object({ formId: z.string().uuid() }))
     .output(
-      z.array(
-        z.object({
-          id: z.string().uuid(),
-          formId: z.string().uuid(),
-          title: z.string(),
-          order: z.number().int(),
-          fieldIds: z.array(z.string().uuid()),
-        }),
-      ),
+      z.array(pageOutputSchema),
     )
     .query(async ({ input, ctx }) => {
       await assertOwnership(input.formId, ctx.user.id);

@@ -47,6 +47,11 @@ vi.mock("@repo/database/schema", () => ({
     responseId: "responseId",
     fieldId: "fieldId",
   },
+  usersTable: {
+    __table: "users",
+    id: "id",
+    email: "email",
+  },
 }));
 
 vi.mock("@repo/database", () => {
@@ -108,6 +113,9 @@ vi.mock("@repo/database", () => {
             },
           ]);
         }
+        if (state.table === "users") {
+          return Promise.resolve([{ email: "test@example.com" }]);
+        }
         return chain;
       }),
       orderBy: vi.fn().mockReturnThis(),
@@ -167,6 +175,7 @@ vi.mock("@repo/database", () => {
     desc: vi.fn(),
     gte: vi.fn(),
     lte: vi.fn(),
+    isNull: vi.fn(),
     __resetStores: resetStores,
   };
 });

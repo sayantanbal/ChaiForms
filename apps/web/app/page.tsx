@@ -69,12 +69,7 @@ const TESTIMONIALS = [
 ];
 
 async function getAuthUrl() {
-  try {
-    const providers = await api.auth.getSupportedAuthenticationProviders.query();
-    return providers[0]?.authUrl ?? "/auth/sign-in";
-  } catch {
-    return "/auth/sign-in";
-  }
+  return "/login";
 }
 
 async function getFeaturedForms() {
@@ -97,10 +92,7 @@ const THEME_COLORS: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const [authUrl, featuredForms] = await Promise.all([
-    getAuthUrl(),
-    getFeaturedForms(),
-  ]);
+  const [authUrl, featuredForms] = await Promise.all([getAuthUrl(), getFeaturedForms()]);
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -115,9 +107,15 @@ export default async function HomePage() {
               </span>
             </Link>
             <div className="hidden md:flex items-center gap-6 text-sm text-gray-400">
-              <Link href="/explore" className="hover:text-white transition-colors">Explore</Link>
-              <Link href="/templates" className="hover:text-white transition-colors">Templates</Link>
-              <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
+              <Link href="/explore" className="hover:text-white transition-colors">
+                Explore
+              </Link>
+              <Link href="/templates" className="hover:text-white transition-colors">
+                Templates
+              </Link>
+              <Link href="/pricing" className="hover:text-white transition-colors">
+                Pricing
+              </Link>
             </div>
             <a
               href={authUrl}
@@ -147,8 +145,8 @@ export default async function HomePage() {
             </span>
           </h1>
           <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-10">
-            Typeform-style forms with themed visuals, drag-and-drop builder,
-            real-time analytics, and instant sharing. Your forms, your way.
+            Typeform-style forms with themed visuals, drag-and-drop builder, real-time analytics,
+            and instant sharing. Your forms, your way.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
@@ -169,14 +167,16 @@ export default async function HomePage() {
 
         {/* Floating theme badges */}
         <div className="relative max-w-4xl mx-auto mt-20 flex flex-wrap justify-center gap-3">
-          {["anime", "startup", "os", "game", "movie", "tech_company", "event", "default"].map((theme) => (
-            <span
-              key={theme}
-              className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r ${THEME_COLORS[theme]} text-white shadow-lg`}
-            >
-              {theme.replace("_", " ")}
-            </span>
-          ))}
+          {["anime", "startup", "os", "game", "movie", "tech_company", "event", "default"].map(
+            (theme) => (
+              <span
+                key={theme}
+                className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r ${THEME_COLORS[theme]} text-white shadow-lg`}
+              >
+                {theme.replace("_", " ")}
+              </span>
+            ),
+          )}
         </div>
       </section>
 
@@ -197,7 +197,9 @@ export default async function HomePage() {
                 key={f.title}
                 className="bg-gray-800/50 border border-white/10 rounded-2xl p-6 hover:bg-gray-800/80 hover:border-white/20 transition-all duration-300 group"
               >
-                <div className="text-4xl mb-4 group-hover:scale-110 transition-transform">{f.icon}</div>
+                <div className="text-4xl mb-4 group-hover:scale-110 transition-transform">
+                  {f.icon}
+                </div>
                 <h3 className="text-lg font-bold mb-2">{f.title}</h3>
                 <p className="text-gray-400 text-sm leading-relaxed">{f.desc}</p>
               </div>
@@ -212,9 +214,7 @@ export default async function HomePage() {
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold mb-3">Featured Forms</h2>
-              <p className="text-gray-400">
-                Discover what the community is building
-              </p>
+              <p className="text-gray-400">Discover what the community is building</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {featuredForms.map((form) => (
@@ -286,9 +286,7 @@ export default async function HomePage() {
       {/* CTA */}
       <section className="py-24 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl font-black mb-4">
-            Ready to build your first form?
-          </h2>
+          <h2 className="text-4xl font-black mb-4">Ready to build your first form?</h2>
           <p className="text-gray-400 text-lg mb-8">
             Free to use, beautiful by default. No credit card required.
           </p>
@@ -311,9 +309,15 @@ export default async function HomePage() {
             <span>— Form builder SaaS</span>
           </div>
           <div className="flex items-center gap-6">
-            <Link href="/explore" className="hover:text-gray-300 transition-colors">Explore</Link>
-            <Link href="/templates" className="hover:text-gray-300 transition-colors">Templates</Link>
-            <Link href="/pricing" className="hover:text-gray-300 transition-colors">Pricing</Link>
+            <Link href="/explore" className="hover:text-gray-300 transition-colors">
+              Explore
+            </Link>
+            <Link href="/templates" className="hover:text-gray-300 transition-colors">
+              Templates
+            </Link>
+            <Link href="/pricing" className="hover:text-gray-300 transition-colors">
+              Pricing
+            </Link>
           </div>
         </div>
       </footer>

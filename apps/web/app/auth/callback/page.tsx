@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { trpc } from "~/trpc/client";
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const code = searchParams.get("code");
@@ -78,5 +78,26 @@ export default function AuthCallbackPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
+          <div className="text-center">
+            <p className="text-sm uppercase tracking-[0.24em] text-slate-400">
+              ChaiForms
+            </p>
+            <h1 className="mt-2 text-2xl font-semibold text-slate-900">
+              Loading sign-in...
+            </h1>
+          </div>
+        </main>
+      }
+    >
+      <AuthCallbackContent />
+    </Suspense>
   );
 }

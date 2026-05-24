@@ -130,7 +130,7 @@ const workspaceAdminMiddleware = tRPCContext.middleware(
       });
     }
 
-    return next({ ctx });
+    return next({ ctx: { ...ctx, user: ctx.user } });
   },
 );
 

@@ -74,9 +74,14 @@ export default function PricingPage() {
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <span>☕</span>
-            <span className="font-bold bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">ChaiForms</span>
+            <span className="font-bold bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
+              ChaiForms
+            </span>
           </Link>
-          <Link href="/auth/sign-in" className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-lg transition-colors font-semibold text-sm">
+          <Link
+            href="/login"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-lg transition-colors font-semibold text-sm"
+          >
             Get Started Free
           </Link>
         </div>
@@ -104,13 +109,17 @@ export default function PricingPage() {
               }`}
             >
               {plan.badge && (
-                <div className={`bg-gradient-to-r ${plan.gradient} text-white text-xs font-bold text-center py-1.5`}>
+                <div
+                  className={`bg-gradient-to-r ${plan.gradient} text-white text-xs font-bold text-center py-1.5`}
+                >
                   {plan.badge}
                 </div>
               )}
 
               <div className="bg-gray-800/50 p-6">
-                <div className={`text-xs font-bold uppercase tracking-wider bg-gradient-to-r ${plan.gradient} bg-clip-text text-transparent mb-2`}>
+                <div
+                  className={`text-xs font-bold uppercase tracking-wider bg-gradient-to-r ${plan.gradient} bg-clip-text text-transparent mb-2`}
+                >
                   {plan.name}
                 </div>
                 <div className="flex items-baseline gap-1 mb-1">
@@ -120,7 +129,7 @@ export default function PricingPage() {
                 <p className="text-gray-400 text-sm mb-6">{plan.description}</p>
 
                 <Link
-                  href="/auth/sign-in"
+                  href="/login"
                   className={`block w-full text-center py-3 rounded-xl font-bold text-sm transition-all ${
                     plan.ctaVariant === "primary"
                       ? `bg-gradient-to-r ${plan.gradient} text-white hover:opacity-90 hover:scale-[1.02]`
@@ -145,9 +154,14 @@ export default function PricingPage() {
 
         <div className="text-center mt-12 text-gray-500 text-sm">
           Questions? Open an issue on{" "}
-          <Link href="https://github.com" className="text-orange-400 hover:underline">GitHub</Link>
-          {" "}or{" "}
-          <a href="mailto:hello@chaiforms.dev" className="text-orange-400 hover:underline">email us</a>.
+          <Link href="https://github.com" className="text-orange-400 hover:underline">
+            GitHub
+          </Link>{" "}
+          or{" "}
+          <a href="mailto:hello@chaiforms.dev" className="text-orange-400 hover:underline">
+            email us
+          </a>
+          .
         </div>
       </div>
     </div>

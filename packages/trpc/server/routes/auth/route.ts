@@ -30,7 +30,7 @@ const REFRESH_COOKIE_NAME = "chaiforms-refresh";
 function accessCookieOptions(isProd: boolean) {
   return {
     httpOnly: true,
-    sameSite: "lax" as const,
+    sameSite: isProd ? ("none" as const) : ("lax" as const),
     secure: isProd,
     maxAge: 15 * 60 * 1000, // 15 mins
     path: "/",
@@ -40,7 +40,7 @@ function accessCookieOptions(isProd: boolean) {
 function refreshCookieOptions(isProd: boolean) {
   return {
     httpOnly: true,
-    sameSite: "lax" as const,
+    sameSite: isProd ? ("none" as const) : ("lax" as const),
     secure: isProd,
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     path: "/api/trpc/auth", // Ensure path matches tRPC base
@@ -67,7 +67,7 @@ function mapUser(user: typeof usersTable.$inferSelect) {
   };
 }
 
-export const authRouter: ReturnType<typeof router> = router({
+export const authRouter = router({
   getSupportedAuthenticationProviders: publicProcedure
     .meta({
       openapi: {
@@ -413,6 +413,30 @@ export const authRouter: ReturnType<typeof router> = router({
       }
       const user = await syncUserFromNeonAuth(profile);
       if (user.isBlocked) throw new TRPCError({ code: "FORBIDDEN" });
+
+      const familyId = generateTokenId();
+      const refreshPlain = generateTokenId();
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      await db.insert(refreshTokensTable).values({
+        userId: user.id,
+        family: familyId,
+        tokenHash: hashToken(refreshPlain),
+        expiresAt,
+      });
+
+      const accessJwt = signAccessJwt(user.id, user.role);
+      const refreshJwt = signRefreshJwt(user.id, familyId);
+      const csrf = createCsrfToken();
+      const isProd = process.env.NODE_ENV === "production";
+
+      ctx.res.cookie(ACCESS_COOKIE_NAME, accessJwt, accessCookieOptions(isProd));
+      ctx.res.cookie(
+        REFRESH_COOKIE_NAME,
+        `${refreshPlain}:${refreshJwt}`,
+        refreshCookieOptions(isProd),
+      );
+      ctx.res.cookie(CSRF_COOKIE_NAME, csrf, csrfCookieOptions(isProd));
 
       return { user: mapUser(user) };
     }),

@@ -8,6 +8,7 @@ vi.mock("@repo/database", () => ({
   and: vi.fn(),
   count: vi.fn(),
   desc: vi.fn(),
+  isNull: vi.fn(),
 }));
 
 vi.mock("@repo/database/schema", () => ({

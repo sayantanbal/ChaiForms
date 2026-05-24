@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { TRPCClientError } from "@trpc/client";
+import { TRPCClientError } from "@repo/trpc/client";
 import { api } from "~/trpc/server";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({
   children,

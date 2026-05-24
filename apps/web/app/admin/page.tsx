@@ -1,5 +1,7 @@
 import { api } from "~/trpc/server";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPage() {
   const [stats, forms, users] = await Promise.all([
     api.admin.getStats.query(),

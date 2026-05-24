@@ -1,31 +1,14 @@
 /**
- * Integration test: Full response submission flow
- *
- * Verifies the critical path:
- *   1. A form exists in "published" state with two required fields.
- *   2. `responses.submit` receives a valid payload.
- *   3. `responsesTable` row is inserted (responseId returned).
- *   4. `answersTable` rows are inserted for each answer.
- *   5. `notificationService.sendSubmissionEmails` is called with the
- *      creator email and form title.
- *
- * Also verifies guard conditions:
- *   - Draft forms reject submissions (FORBIDDEN).
- *   - Archived forms reject submissions (FORBIDDEN).
- *   - Missing required fields reject (BAD_REQUEST).
- *   - Notification is NOT called when insert fails.
+ * Integration test: Full response submission flow (Live DB)
  */
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from "vitest";
 
-// ---------------------------------------------------------------------------
-// Mocks
-// ---------------------------------------------------------------------------
-vi.mock("../../../packages/trpc/server/utils/submit-rate-limit", () => ({
+vi.mock("@repo/trpc/server/utils/submit-rate-limit", () => ({
   assertSubmitRateLimit: vi.fn().mockResolvedValue(undefined),
   resetInMemorySubmitRateLimit: vi.fn(),
 }));
 
-vi.mock("../../../packages/trpc/server/utils/client-context", () => ({
+vi.mock("@repo/trpc/server/utils/client-context", () => ({
   parseClientContext: vi.fn(() => ({
     ipAddress: "127.0.0.1",
     userAgent: "test-agent",
@@ -46,7 +29,7 @@ vi.mock("../../../packages/trpc/server/utils/client-context", () => ({
   buildRateLimitKey: vi.fn(() => "ratelimit"),
 }));
 
-vi.mock("../../../packages/trpc/server/utils/jwt", () => ({
+vi.mock("@repo/trpc/server/utils/jwt", () => ({
   verifyUnlockToken: vi.fn(() => false),
 }));
 
@@ -56,69 +39,41 @@ vi.mock("@repo/services/notification", () => ({
   },
 }));
 
-vi.mock("@repo/database", () => ({
-  db: { select: vi.fn(), insert: vi.fn() },
-  eq: vi.fn(),
-  and: vi.fn(),
-  count: vi.fn(),
-  desc: vi.fn(),
-  gte: vi.fn(),
-  lte: vi.fn(),
-}));
-
-vi.mock("@repo/database/schema", () => ({
-  formsTable: { id: "id", status: "status", formId: "formId", creatorId: "creatorId" },
-  responsesTable: { id: "id", formId: "formId", submittedAt: "submittedAt" },
-  answersTable: { responseId: "responseId", fieldId: "fieldId" },
-  usersTable: { id: "id", email: "email" },
-}));
-
-import { responsesRouter } from "../../../packages/trpc/server/routes/responses/route";
-import { db } from "@repo/database";
+import { responsesRouter } from "@repo/trpc/server/routes/responses/route";
+import { db, clearDatabase, eq } from "@repo/database";
+import { usersTable, formsTable, responsesTable, answersTable } from "@repo/database/schema";
 import { notificationService } from "@repo/services/notification";
 import {
   CSRF_COOKIE_NAME,
   CSRF_HEADER_NAME,
   createCsrfToken,
-} from "../../../packages/trpc/server/utils/csrf";
-
-const mockDb = db as unknown as {
-  select: ReturnType<typeof vi.fn>;
-  insert: ReturnType<typeof vi.fn>;
-};
+} from "@repo/trpc/server/utils/csrf";
 
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
 const FIELD_NAME = "b1a1a2f5-1e76-4013-aad1-4c6bb78ddf7f";
 const FIELD_EMAIL = "34d1e84e-44e1-4d35-9c2e-59a7d840a1b9";
-const RESPONSE_ID = "0d7aa3e1-1c71-4f7a-b909-1f94017f0f11";
 const CREATOR_EMAIL = "creator@chaiforms.dev";
+const CREATOR_ID = "a1b2c3d4-e5f6-4789-a012-3456789abcde";
 const FORM_ID = "e8c95b2b-9848-43d4-8a25-0e4c5fa0a222";
 
 const baseForm = {
   id: FORM_ID,
-  creatorId: "a1b2c3d4-e5f6-4789-a012-3456789abcde",
+  creatorId: CREATOR_ID,
   title: "Widget Feedback",
+  slug: "test-slug-submit-flow",
   status: "published" as const,
-  expiryDate: null as Date | null,
-  responseLimit: null as number | null,
-  accessPasswordHash: null as string | null,
+  visibility: "unlisted" as const,
+  theme: "default" as const,
+  scope: "global" as const,
+  requiresAuth: false,
   sendRespondentConfirmation: false,
   fields: [
     { id: FIELD_NAME, type: "short_text", label: "Your name", required: true },
     { id: FIELD_EMAIL, type: "email", label: "Email", required: false },
-  ],
+  ] as any,
 };
-
-type SelectPlan =
-  | { type: "limit"; result: unknown[] }
-  | { type: "where"; result: unknown[] }
-  | { type: "orderByLimit"; result: unknown[] };
-type InsertPlan = { type: "returning"; result: unknown[] } | { type: "valuesOnly" };
-
-let selectPlans: SelectPlan[] = [];
-let insertPlans: InsertPlan[] = [];
 
 function buildCtx() {
   const token = createCsrfToken();
@@ -144,39 +99,15 @@ afterAll(() => {
   delete process.env.CSRF_SECRET;
 });
 
-beforeEach(() => {
-  selectPlans = [];
-  insertPlans = [];
+beforeEach(async () => {
+  await clearDatabase();
   vi.mocked(notificationService.sendSubmissionEmails).mockReset();
-  mockDb.select.mockReset();
-  mockDb.insert.mockReset();
 
-  mockDb.select.mockImplementation(() => {
-    const plan = selectPlans.shift() ?? { type: "where", result: [] };
-    const chain: Record<string, unknown> = { from: vi.fn().mockReturnThis() };
-    if (plan.type === "limit") {
-      chain.where = vi.fn().mockReturnThis();
-      chain.limit = vi.fn().mockResolvedValue(plan.result);
-    } else if (plan.type === "orderByLimit") {
-      chain.where = vi.fn().mockReturnThis();
-      chain.orderBy = vi.fn().mockReturnThis();
-      chain.limit = vi.fn().mockReturnThis();
-      chain.offset = vi.fn().mockResolvedValue(plan.result);
-    } else {
-      chain.where = vi.fn().mockResolvedValue(plan.result);
-    }
-    return chain as ReturnType<typeof db.select>;
-  });
-
-  mockDb.insert.mockImplementation(() => {
-    const plan = insertPlans.shift() ?? { type: "valuesOnly" };
-    if (plan.type === "returning") {
-      return {
-        values: vi.fn().mockReturnThis(),
-        returning: vi.fn().mockResolvedValue(plan.result),
-      };
-    }
-    return { values: vi.fn().mockResolvedValue(undefined) };
+  // Insert creator
+  await db.insert(usersTable).values({
+    id: CREATOR_ID,
+    email: CREATOR_EMAIL,
+    fullName: "Creator",
   });
 });
 
@@ -185,14 +116,7 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 describe("responses.submit — full flow", () => {
   it("persists responsesTable + answersTable rows and calls sendSubmissionEmails", async () => {
-    // 1. Fetch form
-    selectPlans.push({ type: "limit", result: [baseForm] });
-    // 2. Insert response row → returns responseId
-    insertPlans.push({ type: "returning", result: [{ id: RESPONSE_ID }] });
-    // 3. Insert answers rows (batch, no returning)
-    insertPlans.push({ type: "valuesOnly" });
-    // 4. Fetch creator email for notification
-    selectPlans.push({ type: "limit", result: [{ email: CREATOR_EMAIL }] });
+    await db.insert(formsTable).values(baseForm);
 
     const caller = responsesRouter.createCaller(buildCtx() as any);
 
@@ -205,26 +129,28 @@ describe("responses.submit — full flow", () => {
       ],
     });
 
-    // Response row inserted
     expect(result.success).toBe(true);
-    expect(result.responseId).toBe(RESPONSE_ID);
+    expect(result.responseId).toBeDefined();
 
-    // db.insert called twice: once for responses, once for answers
-    expect(mockDb.insert).toHaveBeenCalledTimes(2);
+    // Verify DB insertion
+    const dbResponses = await db.select().from(responsesTable).where(eq(responsesTable.id, result.responseId));
+    expect(dbResponses).toHaveLength(1);
 
-    // Notification triggered
+    const dbAnswers = await db.select().from(answersTable).where(eq(answersTable.responseId, result.responseId));
+    expect(dbAnswers).toHaveLength(2);
+
     expect(notificationService.sendSubmissionEmails).toHaveBeenCalledTimes(1);
     expect(notificationService.sendSubmissionEmails).toHaveBeenCalledWith(
       expect.objectContaining({
         creatorEmail: CREATOR_EMAIL,
         formTitle: "Widget Feedback",
-        responseId: RESPONSE_ID,
+        responseId: result.responseId,
       })
     );
   });
 
   it("rejects submissions where required fields are missing", async () => {
-    selectPlans.push({ type: "limit", result: [baseForm] });
+    await db.insert(formsTable).values(baseForm);
 
     const caller = responsesRouter.createCaller(buildCtx() as any);
 
@@ -236,13 +162,13 @@ describe("responses.submit — full flow", () => {
       })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
-    // No rows inserted
-    expect(mockDb.insert).not.toHaveBeenCalled();
+    const dbResponses = await db.select().from(responsesTable);
+    expect(dbResponses).toHaveLength(0);
     expect(notificationService.sendSubmissionEmails).not.toHaveBeenCalled();
   });
 
   it("rejects submissions to a draft form", async () => {
-    selectPlans.push({ type: "limit", result: [{ ...baseForm, status: "draft" }] });
+    await db.insert(formsTable).values({ ...baseForm, status: "draft" });
 
     const caller = responsesRouter.createCaller(buildCtx() as any);
 
@@ -253,12 +179,10 @@ describe("responses.submit — full flow", () => {
         answers: [{ fieldId: FIELD_NAME, value: "Rohan" }],
       })
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
-
-    expect(mockDb.insert).not.toHaveBeenCalled();
   });
 
   it("rejects submissions to an archived form", async () => {
-    selectPlans.push({ type: "limit", result: [{ ...baseForm, status: "archived" }] });
+    await db.insert(formsTable).values({ ...baseForm, status: "archived" });
 
     const caller = responsesRouter.createCaller(buildCtx() as any);
 
@@ -272,13 +196,11 @@ describe("responses.submit — full flow", () => {
   });
 
   it("rejects when form is not found", async () => {
-    selectPlans.push({ type: "limit", result: [] }); // no form
-
     const caller = responsesRouter.createCaller(buildCtx() as any);
 
     await expect(
       caller.submit({
-        formId: "non-existent-form-id",
+        formId: "5f8a0a99-9999-4444-8888-000000000000",
         startedAt: new Date().toISOString(),
         answers: [{ fieldId: FIELD_NAME, value: "Rohan" }],
       })

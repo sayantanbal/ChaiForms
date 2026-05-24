@@ -31,21 +31,11 @@ export default function SignUpPage() {
       <form action={formAction} className="flex w-full max-w-sm flex-col gap-4">
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium">Name</span>
-          <input
-            name="name"
-            type="text"
-            required
-            className="rounded-md border px-3 py-2"
-          />
+          <input name="name" type="text" required className="rounded-md border px-3 py-2" />
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium">Email</span>
-          <input
-            name="email"
-            type="email"
-            required
-            className="rounded-md border px-3 py-2"
-          />
+          <input name="email" type="email" required className="rounded-md border px-3 py-2" />
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium">Password</span>
@@ -72,7 +62,7 @@ export default function SignUpPage() {
       </form>
       <p className="text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link href="/auth/sign-in" className="underline">
+        <Link href="/login" className="underline">
           Sign in
         </Link>
       </p>

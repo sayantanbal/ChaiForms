@@ -24,11 +24,38 @@ const openApiDocument = generateOpenApiDocument(serverRouter, {
 });
 
 const isProd = env.NODE_ENV === "production";
+const configuredOrigins = env.WEB_ORIGIN.split(",").map((origin) => origin.trim());
+const allowAnyOrigin = configuredOrigins.includes("*");
+const allowedOrigins = new Set(
+  configuredOrigins
+    .map((origin) => normalizeOrigin(origin))
+    .filter((origin): origin is string => Boolean(origin)),
+);
+
+function normalizeOrigin(origin: string): string | null {
+  const trimmed = origin.trim();
+  if (!trimmed) return null;
+
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return trimmed.replace(/\/+$/, "");
+  }
+}
 
 app.use(
   cors({
-    origin: env.WEB_ORIGIN,
+    origin(origin, callback) {
+      const requestOrigin = origin ? normalizeOrigin(origin) : null;
+      if (allowAnyOrigin || !requestOrigin || allowedOrigins.has(requestOrigin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS origin not allowed: ${origin}`));
+    },
     credentials: true,
+    methods: ["GET", "POST", "OPTIONS"],
   }),
 );
 

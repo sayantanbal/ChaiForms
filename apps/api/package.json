@@ -10,6 +10,9 @@
     "lint": "eslint src/*"
   },
   "devDependencies": {
+    "google-auth-library": "^10.5.0",
+    "@repo/database": "workspace:*",
+    "@repo/services": "workspace:*",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@swc/core": "^1.15.8",

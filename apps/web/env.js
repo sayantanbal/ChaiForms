@@ -3,17 +3,14 @@ import { z } from "zod";
 
 export const env = createEnv({
   server: {
-    NEON_AUTH_BASE_URL: z.string().url(),
-    NEON_AUTH_COOKIE_SECRET: z.string().min(32),
+    NEON_AUTH_BASE_URL: z.string().url().optional(),
+    NEON_AUTH_COOKIE_SECRET: z.string().min(32).optional(),
     JWT_SECRET: z.string().min(32).optional(),
   },
   client: {
     NEXT_PUBLIC_API_URL: z.string().url(),
     NEXT_PUBLIC_WEB_BASE_URL: z.string().url().optional(),
-    NEXT_PUBLIC_ENABLE_DEMO_LOGIN: z
-      .enum(["true", "false"])
-      .optional()
-      .default("false"),
+    NEXT_PUBLIC_ENABLE_DEMO_LOGIN: z.enum(["true", "false"]).optional().default("false"),
   },
   runtimeEnv: {
     NEON_AUTH_BASE_URL: process.env.NEON_AUTH_BASE_URL,

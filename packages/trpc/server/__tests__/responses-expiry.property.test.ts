@@ -113,7 +113,7 @@ describe("responses.submit expiry", () => {
   it("rejects submissions after expiry date", async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.date({ max: new Date(Date.now() - 1000) }),
+        fc.date({ max: new Date(Date.now() - 1000) }).filter(d => !Number.isNaN(d.getTime())),
         async (expiryDate) => {
           const form = {
             id: "f0d0c1c2-73ad-4f30-8a1c-2f0b7a9d2d2f",

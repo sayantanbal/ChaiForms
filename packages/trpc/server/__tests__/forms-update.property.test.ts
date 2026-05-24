@@ -107,6 +107,7 @@ const settingsArb = fc.record(
           min: new Date("2024-01-01T00:00:00.000Z"),
           max: new Date("2025-12-31T23:59:59.000Z"),
         })
+        .filter(d => !Number.isNaN(d.getTime()))
         .map((d) => d.toISOString().replace(/\.\d{3}Z$/, "Z")),
       { nil: undefined },
     ),

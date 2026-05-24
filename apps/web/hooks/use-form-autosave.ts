@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
-import { trpc } from "@repo/trpc/client";
+import { trpc } from "~/trpc/client";
 import { FieldSchemaUnion } from "@repo/schemas";
 import { toast } from "sonner";
 

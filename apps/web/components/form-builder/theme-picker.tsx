@@ -13,11 +13,13 @@ const THEMES = [
   { id: "tech_company", label: "Tech Co", color: "bg-indigo-100 dark:bg-indigo-900" },
   { id: "os", label: "OS", color: "bg-slate-100 dark:bg-slate-900" },
   { id: "event", label: "Event", color: "bg-orange-100 dark:bg-orange-900" }
-];
+] as const;
+
+type ThemeId = (typeof THEMES)[number]["id"];
 
 interface ThemePickerProps {
-  currentTheme: string;
-  onSelectTheme: (theme: string) => void;
+  currentTheme: ThemeId;
+  onSelectTheme: (theme: ThemeId) => void;
 }
 
 export function ThemePicker({ currentTheme, onSelectTheme }: ThemePickerProps) {

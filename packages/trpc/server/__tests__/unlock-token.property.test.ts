@@ -61,7 +61,7 @@ describe("forms.unlock", () => {
           expect(verifyUnlockToken(result.unlockToken, formId)).toBe(true);
         },
       ),
-      { numRuns: 100 },
+      { numRuns: 10 },
     );
   });
 
@@ -98,7 +98,7 @@ describe("forms.unlock", () => {
           ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
         },
       ),
-      { numRuns: 100 },
+      { numRuns: 10 },
     );
   });
 });

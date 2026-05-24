@@ -225,6 +225,11 @@ export const workspacesRouter = router({
     )
     .output(workspaceMemberOutputSchema)
     .mutation(async ({ input, ctx }) => {
+      const inviter = ctx.user;
+      if (!inviter) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
       const [workspace] = await db
         .select()
         .from(workspacesTable)
@@ -293,7 +298,7 @@ export const workspacesRouter = router({
       notificationService.sendWorkspaceInviteEmail({
         inviteeEmail: user.email,
         workspaceName: workspace.name,
-        inviterName: ctx.user.fullName,
+        inviterName: inviter.fullName,
         workspaceId: workspace.id,
         webBaseUrl,
       });

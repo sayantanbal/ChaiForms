@@ -18,7 +18,11 @@ export async function ensureCsrfToken(): Promise<string> {
     return fromCookie;
   }
 
-  const res = await fetch("/api/csrf", { credentials: "include" });
+  const baseUrl =
+    typeof window === "undefined"
+      ? (process.env.NEXT_PUBLIC_WEB_BASE_URL ?? "http://localhost:3000")
+      : "";
+  const res = await fetch(`${baseUrl}/api/csrf`, { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch CSRF token");
   const data = (await res.json()) as { token: string };
   cachedToken = data.token;
@@ -31,15 +35,16 @@ export async function getTrpcHeaders(): Promise<Record<string, string>> {
   const csrf = await ensureCsrfToken();
   headers[CSRF_HEADER_NAME] = csrf;
 
-  if (process.env.NODE_ENV !== "production") {
-    return headers;
-  }
-
-  const { authClient } = await import("~/lib/auth/client");
-  const session = await authClient.getSession();
-  const token = session.data?.session?.token;
-  if (token) {
-    headers.authorization = `Bearer ${token}`;
+  // Browser tRPC calls are proxied to the API (see next.config rewrites). Auth
+  // cookies from the web origin are not always forwarded, so send the Neon
+  // session token explicitly (same as production split-deploy behavior).
+  if (typeof window !== "undefined") {
+    const { authClient } = await import("~/lib/auth/client");
+    const session = await authClient.getSession();
+    const token = session.data?.session?.token;
+    if (token) {
+      headers.authorization = `Bearer ${token}`;
+    }
   }
 
   return headers;

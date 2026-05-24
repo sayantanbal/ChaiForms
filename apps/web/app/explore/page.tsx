@@ -44,12 +44,21 @@ export default function ExplorePage() {
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <span>☕</span>
-            <span className="font-bold bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">ChaiForms</span>
+            <span className="font-bold bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
+              ChaiForms
+            </span>
           </Link>
           <div className="flex items-center gap-4 text-sm">
-            <Link href="/templates" className="text-gray-400 hover:text-white transition-colors">Templates</Link>
-            <Link href="/pricing" className="text-gray-400 hover:text-white transition-colors">Pricing</Link>
-            <Link href="/login" className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-lg transition-colors font-semibold">
+            <Link href="/templates" className="text-gray-400 hover:text-white transition-colors">
+              Templates
+            </Link>
+            <Link href="/pricing" className="text-gray-400 hover:text-white transition-colors">
+              Pricing
+            </Link>
+            <Link
+              href="/login"
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-lg transition-colors font-semibold"
+            >
               Sign In
             </Link>
           </div>
@@ -60,7 +69,9 @@ export default function ExplorePage() {
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-black mb-2">Explore Public Forms</h1>
           <p className="text-gray-400">
-            {isLoading ? "Loading..." : `${total} public form${total !== 1 ? "s" : ""} from the community`}
+            {isLoading
+              ? "Loading..."
+              : `${total} public form${total !== 1 ? "s" : ""} from the community`}
           </p>
         </div>
 
@@ -76,7 +87,7 @@ export default function ExplorePage() {
             <h2 className="text-xl font-bold mb-2 text-white">No public forms yet</h2>
             <p className="text-gray-400 mb-6">Be the first to publish a form for the community!</p>
             <Link
-              href="/login"
+              href="/dashboard/forms/new"
               className="inline-block bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold px-6 py-3 rounded-xl hover:opacity-90 transition-opacity"
             >
               Create a Form →
@@ -92,7 +103,9 @@ export default function ExplorePage() {
                   className={`group bg-gradient-to-br ${THEME_GRADIENTS[form.theme] ?? THEME_GRADIENTS.default} bg-gray-800/30 border border-white/10 rounded-xl p-5 hover:border-white/30 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/30 flex flex-col`}
                 >
                   <div className="mb-3">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${THEME_BADGE[form.theme] ?? THEME_BADGE.default}`}>
+                    <span
+                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${THEME_BADGE[form.theme] ?? THEME_BADGE.default}`}
+                    >
                       {form.theme.replace("_", " ")}
                     </span>
                   </div>
@@ -117,7 +130,10 @@ export default function ExplorePage() {
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-3 mt-10">
                 <button
-                  onClick={() => { setPage((p) => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  onClick={() => {
+                    setPage((p) => Math.max(1, p - 1));
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
                   disabled={page === 1}
                   className="px-5 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm disabled:opacity-30 hover:bg-white/10 transition-all"
                 >
@@ -127,7 +143,10 @@ export default function ExplorePage() {
                   Page {page} of {totalPages}
                 </span>
                 <button
-                  onClick={() => { setPage((p) => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  onClick={() => {
+                    setPage((p) => Math.min(totalPages, p + 1));
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
                   disabled={page === totalPages}
                   className="px-5 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm disabled:opacity-30 hover:bg-white/10 transition-all"
                 >
@@ -146,8 +165,12 @@ export default function ExplorePage() {
             <span className="font-bold text-gray-400">ChaiForms</span>
           </div>
           <div className="flex items-center gap-6">
-            <Link href="/templates" className="hover:text-gray-300 transition-colors">Templates</Link>
-            <Link href="/pricing" className="hover:text-gray-300 transition-colors">Pricing</Link>
+            <Link href="/templates" className="hover:text-gray-300 transition-colors">
+              Templates
+            </Link>
+            <Link href="/pricing" className="hover:text-gray-300 transition-colors">
+              Pricing
+            </Link>
           </div>
         </div>
       </footer>

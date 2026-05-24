@@ -100,7 +100,7 @@ describe("analytics.getFieldBreakdown distribution", () => {
             const fieldAnswers = groupedAnswers.filter(a => a.fieldId === field.fieldId);
             
             // Expected distribution
-            const expectedDist: Record<string, number> = {};
+            const expectedDist: Record<string, number> = Object.create(null);
             let expectedTotal = 0;
             
             for (const ans of fieldAnswers) {

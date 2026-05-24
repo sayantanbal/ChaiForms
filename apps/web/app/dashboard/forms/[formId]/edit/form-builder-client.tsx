@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { PanelGroup, Panel, PanelResizeHandle } from "react-resizable-panels";
+import { Group, Panel, Separator } from "react-resizable-panels";
 import { FieldSchemaUnion, FormSettingsSchema } from "@repo/schemas";
-import { trpc } from "@repo/trpc/client";
+import { trpc } from "~/trpc/client";
 import { useFormAutosave } from "@/hooks/use-form-autosave";
 import { FieldTypePalette } from "@/components/form-builder/field-type-palette";
 import { FormCanvas } from "@/components/form-builder/form-canvas";
@@ -176,16 +176,16 @@ export function FormBuilderClient({ initialForm }: { initialForm: any }) {
       </header>
 
       {/* Main Workspace */}
-      <PanelGroup direction="horizontal" className="flex-1 overflow-hidden">
+      <Group orientation="horizontal" className="flex-1 overflow-hidden">
         {/* Left Panel: Field Palette */}
-        <Panel defaultSize={20} minSize={15} maxSize={30}>
+        <Panel defaultSize="20%" minSize="15%" maxSize="30%">
           <FieldTypePalette onAddField={handleAddField} />
         </Panel>
         
-        <PanelResizeHandle className="w-1 bg-border hover:bg-primary/50 cursor-col-resize transition-colors" />
+        <Separator className="w-1 bg-border hover:bg-primary/50 cursor-col-resize transition-colors" />
         
         {/* Center Panel: Canvas */}
-        <Panel defaultSize={55} minSize={40}>
+        <Panel defaultSize="55%" minSize="40%">
           <FormCanvas
             fields={fields}
             selectedFieldId={selectedFieldId}
@@ -196,10 +196,10 @@ export function FormBuilderClient({ initialForm }: { initialForm: any }) {
           />
         </Panel>
 
-        <PanelResizeHandle className="w-1 bg-border hover:bg-primary/50 cursor-col-resize transition-colors" />
+        <Separator className="w-1 bg-border hover:bg-primary/50 cursor-col-resize transition-colors" />
         
         {/* Right Panel: Configuration */}
-        <Panel defaultSize={25} minSize={20} maxSize={40} className="flex flex-col bg-background">
+        <Panel defaultSize="25%" minSize="20%" maxSize="40%" className="flex flex-col bg-background">
           <div className="flex border-b border-border p-2 gap-2 shrink-0">
             <button
               onClick={() => setActiveTab("field")}
@@ -247,7 +247,7 @@ export function FormBuilderClient({ initialForm }: { initialForm: any }) {
             )}
           </div>
         </Panel>
-      </PanelGroup>
+      </Group>
     </div>
   );
 }

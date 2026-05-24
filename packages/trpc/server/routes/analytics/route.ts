@@ -118,7 +118,7 @@ export const analyticsRouter = router({
 
       for (const row of rows) {
         if (!byField.has(row.fieldId)) {
-          byField.set(row.fieldId, { responseCount: 0, distribution: {} });
+          byField.set(row.fieldId, { responseCount: 0, distribution: Object.create(null) });
         }
         const entry = byField.get(row.fieldId)!;
         const cnt = Number(row.cnt);
@@ -129,7 +129,7 @@ export const analyticsRouter = router({
       return fields.map((field) => {
         const entry = byField.get(field.id) ?? {
           responseCount: 0,
-          distribution: {},
+          distribution: Object.create(null),
         };
         return {
           fieldId: field.id,

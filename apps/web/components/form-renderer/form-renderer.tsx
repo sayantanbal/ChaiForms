@@ -28,6 +28,7 @@ export function FormRenderer({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pageIndex, setPageIndex] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [startedAt] = useState(() => new Date().toISOString());
 
   // Derive pages from the array or treat all fields as one page
   const pageLayout = pages && pages.length > 0 
@@ -145,6 +146,7 @@ export function FormRenderer({
 
         submitMutation.mutate({
           formId,
+          startedAt,
           unlockToken,
           answers: finalAnswers
         });

@@ -70,7 +70,8 @@ export default async function TemplatesPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {templates.map((template) => {
-              const gradient = THEME_GRADIENTS[template.theme] ?? THEME_GRADIENTS.default;
+              const gradient =
+                THEME_GRADIENTS[template.theme] ?? "from-gray-500 to-slate-600";
               const emoji = THEME_EMOJIS[template.theme] ?? "📝";
               return (
                 <div

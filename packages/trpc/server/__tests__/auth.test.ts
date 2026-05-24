@@ -101,7 +101,7 @@ function mockSelect(rows: unknown[]) {
     where: vi.fn().mockReturnThis(),
     limit: vi.fn().mockResolvedValue(rows),
   };
-  mockDb.select.mockReturnValue(chain);
+  mockDb.select.mockReturnValueOnce(chain);
   return chain;
 }
 
@@ -111,7 +111,7 @@ function mockUpdate(rows: unknown[]) {
     where: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue(rows),
   };
-  mockDb.update.mockReturnValue(chain);
+  mockDb.update.mockReturnValueOnce(chain);
   return chain;
 }
 
@@ -120,7 +120,7 @@ function mockInsert(rows: unknown[]) {
     values: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue(rows),
   };
-  mockDb.insert.mockReturnValue(chain);
+  mockDb.insert.mockReturnValueOnce(chain);
   return chain;
 }
 
@@ -128,7 +128,7 @@ function mockDelete(rows: unknown[]) {
   const chain = {
     where: vi.fn().mockResolvedValue(rows),
   };
-  mockDb.delete.mockReturnValue(chain);
+  mockDb.delete.mockReturnValueOnce(chain);
   return chain;
 }
 
@@ -211,12 +211,13 @@ describe("auth router", () => {
     expect(ctx.res.cookie).toHaveBeenCalledWith(
       "chaiforms-csrf",
       expect.any(String),
-      expect.objectContaining({ sameSite: "strict" }),
+      expect.objectContaining({ sameSite: "lax" }),
     );
   });
 
   it("callback rejects blocked user", async () => {
     mockSelect([{ ...baseUser, isBlocked: true }]);
+    mockUpdate([{ ...baseUser, isBlocked: true }]);
 
     const ctx = createContext();
     const caller = authRouter.createCaller(ctx);

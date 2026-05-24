@@ -11,8 +11,9 @@ import { resolveThemeKey } from "~/lib/themes";
 export default function PreviewPage() {
   const { formId } = useParams<{ formId: string }>();
   const { data: form, isLoading } = trpc.forms.getById.useQuery({ formId });
+  const { data: pages, isLoading: pagesLoading } = trpc.forms.getPages.useQuery({ formId });
 
-  if (isLoading) {
+  if (isLoading || pagesLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-950">
         <div className="flex flex-col items-center gap-3 text-gray-400">
@@ -90,7 +91,7 @@ export default function PreviewPage() {
             <FormRenderer
               formId={form.id}
               fields={fields}
-              pages={form.pages as any}
+              pages={pages}
               thankyouMessage={form.thankyouMessage}
               previewMode
             />

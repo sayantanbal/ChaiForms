@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from "../../shared/csrf";
+export { CSRF_COOKIE_NAME, CSRF_HEADER_NAME };
 
 const DEV_CSRF_SECRET = "chaiforms-dev-csrf-secret-chaiforms-dev-csrf-secret";
 
@@ -40,16 +41,43 @@ function isValidCsrfToken(token: string): boolean {
   }
 }
 
+function normalizeOrigin(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return trimmed.replace(/\/+$/, "");
+  }
+}
+
 function assertAllowedOrigin(headers: Record<string, string | string[] | undefined>): void {
-  const webOrigin = process.env.WEB_ORIGIN;
-  if (!webOrigin) return;
+  const webOriginEnv = process.env.WEB_ORIGIN;
+  if (!webOriginEnv) return;
+
+  const configuredOrigins = webOriginEnv.split(",").map((origin) => origin.trim());
+  if (configuredOrigins.includes("*")) return;
+
+  const allowedOrigins = new Set(
+    configuredOrigins
+      .map((origin) => normalizeOrigin(origin))
+      .filter((origin): origin is string => Boolean(origin)),
+  );
+  if (allowedOrigins.size === 0) return;
 
   const origin = headers.origin;
   const referer = headers.referer;
 
-  if (typeof origin === "string" && origin === webOrigin) return;
+  if (typeof origin === "string") {
+    const normalizedOrigin = normalizeOrigin(origin);
+    if (normalizedOrigin && allowedOrigins.has(normalizedOrigin)) return;
+  }
 
-  if (typeof referer === "string" && referer.startsWith(webOrigin)) return;
+  if (typeof referer === "string") {
+    const normalizedReferer = normalizeOrigin(referer);
+    if (normalizedReferer && allowedOrigins.has(normalizedReferer)) return;
+  }
 
   if (!origin && !referer) return;
 
@@ -107,7 +135,7 @@ export function assertCsrf(req: {
 export function csrfCookieOptions(isProd: boolean) {
   return {
     httpOnly: false, // Must be readable by client JS
-    sameSite: "strict" as const,
+    sameSite: isProd ? ("none" as const) : ("lax" as const),
     secure: isProd,
     path: "/",
     maxAge: 60 * 60 * 24, // 1 day

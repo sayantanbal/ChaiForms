@@ -18,9 +18,10 @@ export function ConditionalRuleEditor({ field, allFields, onChange }: Conditiona
   const rules = field.conditionalRules || [];
 
   const addRule = () => {
-    if (precedingFields.length === 0) return;
+    const firstPrecedingField = precedingFields[0];
+    if (!firstPrecedingField) return;
     const newRule = {
-      sourceFieldId: precedingFields[0].id,
+      sourceFieldId: firstPrecedingField.id,
       operator: "equals" as const,
       value: ""
     };
