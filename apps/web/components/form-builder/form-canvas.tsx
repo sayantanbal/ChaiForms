@@ -1,0 +1,107 @@
+"use client";
+
+import React from "react";
+import { 
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from "@dnd-kit/core";
+import { 
+  SortableContext, 
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates
+} from "@dnd-kit/sortable";
+import { FieldSchemaUnion } from "@repo/schemas";
+import { FieldCard } from "./field-card";
+import { Plus } from "lucide-react";
+
+interface FormCanvasProps {
+  fields: FieldSchemaUnion[];
+  selectedFieldId: string | null;
+  onSelectField: (id: string) => void;
+  onDeleteField: (id: string) => void;
+  onReorderFields: (activeId: string, overId: string) => void;
+  onAddField: () => void;
+}
+
+export function FormCanvas({
+  fields,
+  selectedFieldId,
+  onSelectField,
+  onDeleteField,
+  onReorderFields,
+  onAddField
+}: FormCanvasProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      onReorderFields(active.id as string, over.id as string);
+    }
+  };
+
+  return (
+    <div className="flex-1 bg-muted/30 overflow-y-auto p-6 md:p-10 flex flex-col items-center">
+      <div className="w-full max-w-3xl flex flex-col gap-4">
+        {fields.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-xl bg-card text-center">
+            <h3 className="text-lg font-semibold mb-2 text-foreground">No fields yet</h3>
+            <p className="text-muted-foreground max-w-sm mb-6">
+              Drag and drop fields from the palette on the left or click the button below to get started.
+            </p>
+            <button
+              onClick={onAddField}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              Add First Field
+            </button>
+          </div>
+        ) : (
+          <DndContext 
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext 
+              items={fields.map(f => f.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="flex flex-col gap-3">
+                {fields.map((field) => (
+                  <FieldCard
+                    key={field.id}
+                    field={field}
+                    isSelected={selectedFieldId === field.id}
+                    onSelect={onSelectField}
+                    onDelete={onDeleteField}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+            
+            <div className="mt-8 flex justify-center">
+              <button
+                onClick={onAddField}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-secondary text-secondary-foreground rounded-full hover:bg-secondary/80 transition-colors shadow-sm font-medium"
+              >
+                <Plus className="w-5 h-5" />
+                Add Field
+              </button>
+            </div>
+          </DndContext>
+        )}
+      </div>
+    </div>
+  );
+}
