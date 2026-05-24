@@ -179,15 +179,15 @@ function validateAnswers(
 const paginatedResponsesSchema = z.object({
   items: z.array(
     z.object({
-      id: z.string().uuid(),
-      formId: z.string().uuid(),
+      id: z.string(),
+      formId: z.string(),
       startedAt: z.string().datetime(),
       submittedAt: z.string().datetime(),
       respondentEmail: z.string().nullable(),
       answers: z.array(
         z.object({
-          id: z.string().uuid(),
-          fieldId: z.string().uuid(),
+          id: z.string(),
+          fieldId: z.string(),
           value: z.string(),
         }),
       ),
@@ -216,7 +216,7 @@ export const responsesRouter = router({
     .output(
       z.object({
         success: z.boolean(),
-        responseId: z.string().uuid(),
+        responseId: z.string(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -380,7 +380,7 @@ export const responsesRouter = router({
     })
     .input(
       z.object({
-        formId: z.string().uuid(),
+        formId: z.string(),
         page: z.number().int().min(1).default(1),
         pageSize: z.number().int().min(1).max(100).default(20),
         startDate: z.string().datetime().optional(),
@@ -477,7 +477,7 @@ export const responsesRouter = router({
     .meta({
       openapi: { method: "GET", path: getPath("/export-csv"), tags: TAGS },
     })
-    .input(z.object({ formId: z.string().uuid() }))
+    .input(z.object({ formId: z.string() }))
     .output(z.string().describe("CSV content"))
     .query(async ({ input, ctx }) => {
       const [form] = await db

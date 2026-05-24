@@ -24,14 +24,6 @@ export default function FormsListPage() {
 
   const { data, isLoading, refetch } = trpc.forms.list.useQuery({ page, pageSize: PAGE_SIZE });
 
-  const createMutation = trpc.forms.create.useMutation({
-    onSuccess: (form) => {
-      toast.success("Form created!");
-      router.push(`/dashboard/forms/${form.id}/edit`);
-    },
-    onError: (e) => toast.error(e.message),
-  });
-
   const publishMutation = trpc.forms.publish.useMutation({
     onSuccess: () => { toast.success("Form published!"); void refetch(); },
     onError: (e) => toast.error(e.message),
@@ -90,17 +82,13 @@ export default function FormsListPage() {
           <h1 className="text-2xl font-bold">My Forms</h1>
           <p className="text-gray-400 text-sm mt-1">{total} form{total !== 1 ? "s" : ""} total</p>
         </div>
-        <button
+        <Link
           id="create-form-btn"
-          onClick={() => {
-            const title = prompt("Form title:");
-            if (title?.trim()) createMutation.mutate({ title: title.trim() });
-          }}
-          disabled={createMutation.isPending}
-          className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-50 text-white font-bold px-5 py-2.5 rounded-xl transition-all text-sm"
+          href="/dashboard/forms/new"
+          className="inline-block bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold px-5 py-2.5 rounded-xl transition-all text-sm"
         >
-          {createMutation.isPending ? "Creating..." : "+ New Form"}
-        </button>
+          + New Form
+        </Link>
       </div>
 
       {/* Forms list */}

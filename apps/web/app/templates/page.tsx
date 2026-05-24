@@ -130,8 +130,18 @@ export default async function TemplatesPage() {
             <span className="font-bold text-gray-400">ChaiForms</span>
           </div>
           <div className="flex items-center gap-6">
-            <Link href="/explore" className="hover:text-gray-300 transition-colors">Explore</Link>
-            <Link href="/pricing" className="hover:text-gray-300 transition-colors">Pricing</Link>
+            <Link href="/explore" className="hover:text-gray-300 transition-colors">
+              Explore
+            </Link>
+            <Link href="/templates" className="hover:text-gray-300 transition-colors">
+              Templates
+            </Link>
+            <Link href="/pricing" className="hover:text-gray-300 transition-colors">
+              Pricing
+            </Link>
+            <a href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/docs`} target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
+              API Docs
+            </a>
           </div>
         </div>
       </footer>

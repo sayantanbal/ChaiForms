@@ -335,6 +335,9 @@ export default async function HomePage() {
             <Link href="/pricing" className="hover:text-gray-300 transition-colors">
               Pricing
             </Link>
+            <a href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/docs`} target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
+              API Docs
+            </a>
           </div>
         </div>
       </footer>
