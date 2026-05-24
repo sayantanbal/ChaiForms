@@ -53,7 +53,7 @@ const animeFormFields = [
     options: ["Shonen", "Shojo", "Isekai", "Mecha", "Slice of Life", "Horror"],
     placeholder: "Pick your favourite",
     description: "This will help us match your character!",
-    conditionalRules: [],
+
   },
   {
     id: "f1a00000-0000-0000-0000-000000000002",
@@ -62,13 +62,16 @@ const animeFormFields = [
     required: true,
     options: ["Brute Force", "Strategy", "Speed", "Magic", "Teamwork"],
     description: "How do you prefer to solve problems?",
-    conditionalRules: [
-      {
-        sourceFieldId: "f1a00000-0000-0000-0000-000000000001",
-        operator: "equals" as const,
-        value: "Shonen",
-      },
-    ],
+    conditionalRules: {
+      combinator: "AND" as const,
+      rules: [
+        {
+          field: "f1a00000-0000-0000-0000-000000000001",
+          operator: "equals" as const,
+          value: "Shonen",
+        },
+      ],
+    },
   },
   {
     id: "f1a00000-0000-0000-0000-000000000003",
@@ -77,7 +80,7 @@ const animeFormFields = [
     required: false,
     maxRating: 10,
     description: "1 = Solo hero, 10 = Friends are everything",
-    conditionalRules: [],
+
   },
   {
     id: "f1a00000-0000-0000-0000-000000000004",
@@ -85,7 +88,7 @@ const animeFormFields = [
     label: "Which anime have you watched?",
     required: false,
     options: ["Naruto", "One Piece", "Attack on Titan", "Demon Slayer", "Jujutsu Kaisen", "Dragon Ball Z"],
-    conditionalRules: [],
+
   },
   {
     id: "f1a00000-0000-0000-0000-000000000005",
@@ -94,7 +97,7 @@ const animeFormFields = [
     required: false,
     placeholder: "e.g. Shadow Fist of Destiny",
     maxLength: 100,
-    conditionalRules: [],
+
   },
   {
     id: "f1a00000-0000-0000-0000-000000000006",
@@ -103,7 +106,7 @@ const animeFormFields = [
     required: false,
     placeholder: "hero@example.com",
     description: "We'll send your anime character result here!",
-    conditionalRules: [],
+
   },
 ];
 
@@ -115,7 +118,7 @@ const osFormFields = [
     required: true,
     options: ["Linux", "macOS", "Windows", "FreeBSD", "ChromeOS"],
     placeholder: "Your daily driver",
-    conditionalRules: [],
+
   },
   {
     id: "f2b00000-0000-0000-0000-000000000002",
@@ -124,13 +127,16 @@ const osFormFields = [
     required: false,
     options: ["Ubuntu", "Arch Linux", "Fedora", "Debian", "NixOS", "Gentoo"],
     description: "Only if you selected Linux above!",
-    conditionalRules: [
-      {
-        sourceFieldId: "f2b00000-0000-0000-0000-000000000001",
-        operator: "equals" as const,
-        value: "Linux",
-      },
-    ],
+    conditionalRules: {
+      combinator: "AND" as const,
+      rules: [
+        {
+          field: "f2b00000-0000-0000-0000-000000000001",
+          operator: "equals" as const,
+          value: "Linux",
+        },
+      ],
+    },
   },
   {
     id: "f2b00000-0000-0000-0000-000000000003",
@@ -138,7 +144,7 @@ const osFormFields = [
     label: "Rate your OS out of 10",
     required: true,
     maxRating: 10,
-    conditionalRules: [],
+
   },
   {
     id: "f2b00000-0000-0000-0000-000000000004",
@@ -146,7 +152,7 @@ const osFormFields = [
     label: "What do you use your OS for?",
     required: true,
     options: ["Development", "Gaming", "Design", "Office Work", "Server", "School"],
-    conditionalRules: [],
+
   },
   {
     id: "f2b00000-0000-0000-0000-000000000005",
@@ -155,14 +161,14 @@ const osFormFields = [
     required: false,
     placeholder: "Describe your dream feature...",
     maxLength: 500,
-    conditionalRules: [],
+
   },
   {
     id: "f2b00000-0000-0000-0000-000000000006",
     type: "checkbox" as const,
     label: "I use dark mode exclusively",
     required: false,
-    conditionalRules: [],
+
   },
 ];
 
@@ -174,7 +180,7 @@ const startupFormFields = [
     required: true,
     placeholder: "e.g. Uber for dog walking",
     maxLength: 200,
-    conditionalRules: [],
+
   },
   {
     id: "f3c00000-0000-0000-0000-000000000002",
@@ -182,7 +188,7 @@ const startupFormFields = [
     label: "Target market",
     required: true,
     options: ["B2B", "B2C", "B2B2C", "Government", "Non-profit"],
-    conditionalRules: [],
+
   },
   {
     id: "f3c00000-0000-0000-0000-000000000003",
@@ -192,7 +198,7 @@ const startupFormFields = [
     min: 1,
     max: 100000,
     placeholder: "e.g. 500",
-    conditionalRules: [],
+
   },
   {
     id: "f3c00000-0000-0000-0000-000000000004",
@@ -201,7 +207,7 @@ const startupFormFields = [
     required: true,
     maxRating: 10,
     description: "1 = Just brainstorming, 10 = Ready to quit my job",
-    conditionalRules: [],
+
   },
   {
     id: "f3c00000-0000-0000-0000-000000000005",
@@ -209,7 +215,7 @@ const startupFormFields = [
     label: "What challenges do you foresee?",
     required: false,
     options: ["Funding", "Team", "Technical", "Market Timing", "Competition", "Regulation"],
-    conditionalRules: [],
+
   },
   {
     id: "f3c00000-0000-0000-0000-000000000006",
@@ -217,7 +223,7 @@ const startupFormFields = [
     label: "Your email for feedback",
     required: false,
     placeholder: "founder@startup.com",
-    conditionalRules: [],
+
   },
 ];
 

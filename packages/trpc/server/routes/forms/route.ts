@@ -745,7 +745,7 @@ export const formsRouter = router({
       await assertOwnership(input.formId, ctx.user.id);
 
       // Validate unique field IDs
-      const fieldIds = input.fields.map((f) => f.id);
+      const fieldIds: string[] = input.fields.map((f: any) => f.id as string);
       if (new Set(fieldIds).size !== fieldIds.length) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -753,17 +753,44 @@ export const formsRouter = router({
         });
       }
 
-      // Validate conditionalRules reference earlier fields only
-      for (let i = 0; i < input.fields.length; i++) {
-        const field = input.fields[i]!;
-        if (field.conditionalRules && field.conditionalRules.length > 0) {
-          const earlierIds = new Set(fieldIds.slice(0, i));
-          for (const rule of field.conditionalRules) {
-            if (!earlierIds.has(rule.sourceFieldId)) {
+      // Helper to traverse rules and validate source fields
+      const validateRuleGroup = (group: any, earlierIds: Set<string>, fieldLabel: string) => {
+        if (!group || !group.rules) return;
+        for (const node of group.rules) {
+          if ("combinator" in node) {
+            validateRuleGroup(node, earlierIds, fieldLabel);
+          } else if (node.field) {
+            if (!earlierIds.has(node.field)) {
               throw new TRPCError({
                 code: "BAD_REQUEST",
-                message: `ConditionalRule on field "${field.label}" references field ID "${rule.sourceFieldId}" which does not appear earlier in the form`,
+                message: `Rule on field "${fieldLabel}" references field ID "${node.field}" which does not appear earlier in the form`,
               });
+            }
+          }
+        }
+      };
+
+      // Validate conditionalRules and dynamicOptionRules reference earlier fields only
+      for (let i = 0; i < input.fields.length; i++) {
+        const field = input.fields[i] as any;
+        const earlierIds = new Set(fieldIds.slice(0, i));
+        
+        if (field.conditionalRules) {
+          if (Array.isArray(field.conditionalRules)) {
+             for (const rule of field.conditionalRules) {
+               if (rule.sourceFieldId && !earlierIds.has(rule.sourceFieldId)) {
+                 throw new TRPCError({ code: "BAD_REQUEST", message: `Rule references invalid field` });
+               }
+             }
+          } else {
+             validateRuleGroup(field.conditionalRules, earlierIds, field.label);
+          }
+        }
+
+        if (field.dynamicOptionRules) {
+          for (const dynRule of field.dynamicOptionRules) {
+            if (dynRule.ruleGroup) {
+              validateRuleGroup(dynRule.ruleGroup, earlierIds, field.label + " (Dynamic Options)");
             }
           }
         }
@@ -797,7 +824,7 @@ export const formsRouter = router({
         await db.delete(pagesTable).where(eq(pagesTable.formId, input.formId));
         if (input.pages.length > 0) {
           await db.insert(pagesTable).values(
-            input.pages.map((p) => ({
+            input.pages.map((p: any) => ({
               id: p.id,
               formId: input.formId,
               title: p.title,

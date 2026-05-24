@@ -241,13 +241,16 @@ describe("FieldSchemaUnion", () => {
     const result = FieldSchemaUnion.safeParse({
       ...baseField(),
       type: "short_text",
-      conditionalRules: [
-        {
-          sourceFieldId: sourceId,
-          operator: "equals",
-          value: "yes",
-        },
-      ],
+      conditionalRules: {
+        combinator: "AND",
+        rules: [
+          {
+            field: sourceId,
+            operator: "equals",
+            value: "yes",
+          },
+        ],
+      },
     });
     expect(result.success).toBe(true);
   });

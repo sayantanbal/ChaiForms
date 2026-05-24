@@ -179,7 +179,7 @@ export function FormBuilderClient({ initialForm }: { initialForm: any }) {
           </Link>
           <button
             onClick={() => {
-              const url = `${window.location.origin}/forms/${initialForm.slug || initialForm.id}`;
+              const url = `${window.location.origin}/f/${initialForm.slug || initialForm.id}`;
               navigator.clipboard.writeText(url);
               toast.success("Link copied to clipboard!");
             }}
