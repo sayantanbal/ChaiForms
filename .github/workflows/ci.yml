@@ -11,6 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   JWT_SECRET: test-secret-min-32-characters-long-for-ci
   CSRF_SECRET: test-secret-min-32-characters-long-for-ci
   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/chaiforms_test
@@ -46,7 +47,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
 
       - name: Install dependencies
@@ -110,7 +111,7 @@ jobs:
             --port=8080
             --min-instances=0
             --max-instances=10
-            --set-env-vars=NODE_ENV=production
+            --set-env-vars=NODE_ENV=production,WEB_ORIGIN=https://chaiforms.sayantanbal.in
 
   deploy-web:
     name: Deploy Web (Vercel)
