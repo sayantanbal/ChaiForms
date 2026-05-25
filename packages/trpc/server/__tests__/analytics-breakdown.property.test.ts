@@ -10,6 +10,10 @@ vi.mock("@repo/database", () => ({
   eq: vi.fn(),
   and: vi.fn(),
   count: vi.fn(),
+  sql: vi.fn((strings: TemplateStringsArray, ...values: unknown[]) => ({
+    strings,
+    values,
+  })),
 }));
 
 vi.mock("@repo/database/schema", () => ({
@@ -25,6 +29,15 @@ vi.mock("@repo/database/schema", () => ({
   responsesTable: {
     id: "id",
     formId: "formId",
+  },
+  answersV2Table: {
+    fieldId: "fieldId",
+    valueText: "valueText",
+    valueNumber: "valueNumber",
+    valueDate: "valueDate",
+    valueBoolean: "valueBoolean",
+    valueJson: "valueJson",
+    responseId: "responseId",
   },
 }));
 
@@ -54,7 +67,7 @@ describe("analytics.getFieldBreakdown distribution", () => {
   it("accurately computes the frequency distribution of answers for each field", async () => {
     const fieldIdGen = fc.uuid();
     const valueGen = fc.string({ minLength: 1, maxLength: 20 });
-    
+
     await fc.assert(
       fc.asyncProperty(
         fc.array(
@@ -63,17 +76,17 @@ describe("analytics.getFieldBreakdown distribution", () => {
             value: valueGen,
             cnt: fc.integer({ min: 1, max: 100 }),
           }),
-          { minLength: 1, maxLength: 20 }
+          { minLength: 1, maxLength: 20 },
         ),
         async (groupedAnswers) => {
           const formId = "9b2c6d5e-2345-6789-abcd-ef0123456789";
-          
+
           // Deduplicate fieldIds for the form schema
-          const uniqueFieldIds = Array.from(new Set(groupedAnswers.map(a => a.fieldId)));
+          const uniqueFieldIds = Array.from(new Set(groupedAnswers.map((a) => a.fieldId)));
           const form = {
             id: formId,
             creatorId: user.id,
-            fields: uniqueFieldIds.map(id => ({ id, label: `Field ${id}`, type: "short_text" })),
+            fields: uniqueFieldIds.map((id) => ({ id, label: `Field ${id}`, type: "short_text" })),
           };
 
           const selectQueue: unknown[][] = [[form], groupedAnswers];
@@ -91,29 +104,35 @@ describe("analytics.getFieldBreakdown distribution", () => {
 
           const ctx = createContext();
           const caller = analyticsRouter.createCaller(ctx);
-          
+
           const result = await caller.getFieldBreakdown({ formId });
 
           expect(result.length).toBe(uniqueFieldIds.length);
-          
+
           for (const field of result) {
-            const fieldAnswers = groupedAnswers.filter(a => a.fieldId === field.fieldId);
-            
+            const fieldAnswers = groupedAnswers.filter((a) => a.fieldId === field.fieldId);
+
             // Expected distribution
             const expectedDist: Record<string, number> = Object.create(null);
             let expectedTotal = 0;
-            
+
             for (const ans of fieldAnswers) {
-              expectedDist[ans.value] = (expectedDist[ans.value] || 0) + ans.cnt;
+              const prev = expectedDist[ans.value] as number | undefined;
+              Object.defineProperty(expectedDist, ans.value, {
+                value: (prev ?? 0) + ans.cnt,
+                enumerable: true,
+                configurable: true,
+                writable: true,
+              });
               expectedTotal += ans.cnt;
             }
-            
+
             expect(field.responseCount).toBe(expectedTotal);
             expect(field.distribution).toEqual(expectedDist);
           }
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 });

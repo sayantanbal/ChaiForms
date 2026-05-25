@@ -41,6 +41,10 @@ vi.mock("@repo/services/notification", () => ({
   },
 }));
 
+const { fetchDisplayAnswersForResponses } = vi.hoisted(() => ({
+  fetchDisplayAnswersForResponses: vi.fn(),
+}));
+
 vi.mock("@repo/database", () => ({
   db: {
     select: vi.fn(),
@@ -53,6 +57,14 @@ vi.mock("@repo/database", () => ({
   gte: vi.fn(),
   lte: vi.fn(),
   isNull: vi.fn(),
+  buildTypedAnswerRow: vi.fn(
+    (responseId: string, _field: unknown, answer: { fieldId: string; value: string }) => ({
+      responseId,
+      fieldId: answer.fieldId,
+      valueText: answer.value,
+    }),
+  ),
+  fetchDisplayAnswersForResponses,
 }));
 
 vi.mock("@repo/database/schema", () => ({
@@ -72,6 +84,10 @@ vi.mock("@repo/database/schema", () => ({
     responseId: "responseId",
     fieldId: "fieldId",
   },
+  answersV2Table: {
+    responseId: "responseId",
+    fieldId: "fieldId",
+  },
   usersTable: {
     id: "id",
     email: "email",
@@ -80,11 +96,7 @@ vi.mock("@repo/database/schema", () => ({
 
 import { responsesRouter } from "../routes/responses/route";
 import { db } from "@repo/database";
-import {
-  CSRF_COOKIE_NAME,
-  CSRF_HEADER_NAME,
-  createCsrfToken,
-} from "../utils/csrf";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, createCsrfToken } from "../utils/csrf";
 import { verifyUnlockToken } from "../utils/jwt";
 import { notificationService } from "@repo/services/notification";
 
@@ -98,9 +110,7 @@ type SelectPlan = {
   result: unknown[];
 };
 
-type InsertPlan =
-  | { type: "returning"; result: unknown[] }
-  | { type: "valuesOnly" };
+type InsertPlan = { type: "returning"; result: unknown[] } | { type: "valuesOnly" };
 
 let selectPlans: SelectPlan[] = [];
 let insertPlans: InsertPlan[] = [];
@@ -172,6 +182,8 @@ afterAll(() => {
 beforeEach(() => {
   selectPlans = [];
   insertPlans = [];
+  fetchDisplayAnswersForResponses.mockReset();
+  fetchDisplayAnswersForResponses.mockResolvedValue(new Map());
   mockDb.select.mockReset();
   mockDb.insert.mockReset();
 
@@ -220,6 +232,7 @@ describe("responses router", () => {
       type: "returning",
       result: [{ id: "0d7aa3e1-1c71-4f7a-b909-1f94017f0f11" }],
     });
+    insertPlans.push({ type: "valuesOnly" });
     insertPlans.push({ type: "valuesOnly" });
     selectPlans.push({
       type: "limit",
@@ -364,17 +377,20 @@ describe("responses router", () => {
         },
       ],
     });
-    selectPlans.push({
-      type: "where",
-      result: [
-        {
-          id: "2b5c1aa0-7b6c-4c7a-ae1f-88107b1ddcfe",
-          responseId: "0d7aa3e1-1c71-4f7a-b909-1f94017f0f11",
-          fieldId: baseForm.fields[0]!.id,
-          value: "Ada",
-        },
-      ],
-    });
+    fetchDisplayAnswersForResponses.mockResolvedValue(
+      new Map([
+        [
+          "0d7aa3e1-1c71-4f7a-b909-1f94017f0f11",
+          [
+            {
+              id: "2b5c1aa0-7b6c-4c7a-ae1f-88107b1ddcfe",
+              fieldId: baseForm.fields[0]!.id,
+              value: "Ada",
+            },
+          ],
+        ],
+      ]),
+    );
 
     const ctx = createContext();
     const caller = responsesRouter.createCaller({
@@ -402,16 +418,20 @@ describe("responses router", () => {
         },
       ],
     });
-    selectPlans.push({
-      type: "where",
-      result: [
-        {
-          responseId: "0d7aa3e1-1c71-4f7a-b909-1f94017f0f11",
-          fieldId: baseForm.fields[0]!.id,
-          value: "Ada",
-        },
-      ],
-    });
+    fetchDisplayAnswersForResponses.mockResolvedValue(
+      new Map([
+        [
+          "0d7aa3e1-1c71-4f7a-b909-1f94017f0f11",
+          [
+            {
+              id: "ans-1",
+              fieldId: baseForm.fields[0]!.id,
+              value: "Ada",
+            },
+          ],
+        ],
+      ]),
+    );
 
     const ctx = createContext();
     const caller = responsesRouter.createCaller({

@@ -6,4 +6,5 @@ export * from "./models/form";
 export * from "./models/page";
 export * from "./models/response";
 export * from "./models/answer";
+export * from "./models/answer-v2";
 export * from "./models/template";

@@ -5,6 +5,7 @@
     "db:migrate": "dotenv -e ../../.env -- drizzle-kit migrate",
     "db:generate": "dotenv -e ../../.env -- drizzle-kit generate",
     "db:seed": "dotenv -e ../../.env -- tsx seed.ts",
+    "db:migrate-answers-v2": "dotenv -e ../../.env -- tsx scripts/migrate-answers-to-v2.ts",
     "dev": "dotenv -e ../../.env -- drizzle-kit studio"
   },
   "devDependencies": {

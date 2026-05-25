@@ -1,8 +1,8 @@
-import "./load-env";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { env } from "./env";
+import { db } from "./db";
 
-export const db = drizzle(env.DATABASE_URL);
+export { db };
 export * from "drizzle-orm";
 export * from "./test-utils";
+export * from "./utils/answer-value";
+export * from "./utils/fetch-answers";
 export default db;

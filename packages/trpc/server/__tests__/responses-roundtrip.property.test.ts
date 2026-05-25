@@ -47,6 +47,11 @@ vi.mock("@repo/database/schema", () => ({
     responseId: "responseId",
     fieldId: "fieldId",
   },
+  answersV2Table: {
+    __table: "answers_v2",
+    responseId: "responseId",
+    fieldId: "fieldId",
+  },
   usersTable: {
     __table: "users",
     id: "id",
@@ -145,14 +150,19 @@ vi.mock("@repo/database", () => {
           });
           return chain;
         }
-        if (tableName === "answers" && Array.isArray(values)) {
+        if (tableName === "answers_v2" && Array.isArray(values)) {
           for (const value of values) {
+            const row = value as Record<string, unknown>;
             answers.push({
               id: nextAnswerId(),
               responseId: responses[responses.length - 1]?.id,
-              ...(value as Record<string, unknown>),
+              fieldId: row.fieldId,
+              value: (row.valueText as string | undefined) ?? String(row.valueNumber ?? ""),
             });
           }
+          return Promise.resolve(undefined);
+        }
+        if (tableName === "answers" && Array.isArray(values)) {
           return Promise.resolve(undefined);
         }
         return Promise.resolve(undefined);
@@ -167,6 +177,21 @@ vi.mock("@repo/database", () => {
 
   const count = vi.fn(() => ({ __count: true }));
 
+  const fetchDisplayAnswersForResponses = vi.fn(async (responseIds: string[]) => {
+    const map = new Map<string, Array<{ id: string; fieldId: string; value: string }>>();
+    for (const responseId of responseIds) {
+      const rows = answers
+        .filter((a) => a.responseId === responseId)
+        .map((a) => ({
+          id: String(a.id),
+          fieldId: String(a.fieldId),
+          value: String(a.value),
+        }));
+      if (rows.length > 0) map.set(responseId, rows);
+    }
+    return map;
+  });
+
   return {
     db: { select, insert },
     eq: vi.fn(),
@@ -176,17 +201,22 @@ vi.mock("@repo/database", () => {
     gte: vi.fn(),
     lte: vi.fn(),
     isNull: vi.fn(),
+    inArray: vi.fn(),
+    buildTypedAnswerRow: vi.fn(
+      (responseId: string, _field: unknown, answer: { fieldId: string; value: string }) => ({
+        responseId,
+        fieldId: answer.fieldId,
+        valueText: answer.value,
+      }),
+    ),
+    fetchDisplayAnswersForResponses,
     __resetStores: resetStores,
   };
 });
 
 import { db } from "@repo/database";
 import { responsesRouter } from "../routes/responses/route";
-import {
-  CSRF_COOKIE_NAME,
-  CSRF_HEADER_NAME,
-  createCsrfToken,
-} from "../utils/csrf";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, createCsrfToken } from "../utils/csrf";
 
 const envKeys = ["CSRF_SECRET", "JWT_SECRET"];
 const originalEnv: Record<string, string | undefined> = {};
@@ -233,30 +263,24 @@ afterAll(() => {
 });
 
 beforeEach(() => {
-  (
-    db as unknown as { __resetStores?: () => void }
-  ).__resetStores?.();
+  (db as unknown as { __resetStores?: () => void }).__resetStores?.();
 });
 
 describe("responses submit/list roundtrip", () => {
   // Feature: form-builder-saas, Property 12: Response submission round-trip
   it("returns the submitted answers in responses.list", async () => {
-    const dataArb = fc
-      .uniqueArray(fc.uuid(), { minLength: 1, maxLength: 4 })
-      .chain((fieldIds) =>
-        fc
-          .array(fc.string({ minLength: 1, maxLength: 8 }), {
-            minLength: fieldIds.length,
-            maxLength: fieldIds.length,
-          })
-          .map((values) => ({ fieldIds, values })),
-      );
+    const dataArb = fc.uniqueArray(fc.uuid(), { minLength: 1, maxLength: 4 }).chain((fieldIds) =>
+      fc
+        .array(fc.string({ minLength: 1, maxLength: 8 }), {
+          minLength: fieldIds.length,
+          maxLength: fieldIds.length,
+        })
+        .map((values) => ({ fieldIds, values })),
+    );
 
     await fc.assert(
       fc.asyncProperty(dataArb, async ({ fieldIds, values }) => {
-        (
-          db as unknown as { __resetStores?: () => void }
-        ).__resetStores?.();
+        (db as unknown as { __resetStores?: () => void }).__resetStores?.();
 
         const answers = fieldIds.map((id, index) => ({
           fieldId: id,

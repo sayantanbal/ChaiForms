@@ -6,9 +6,11 @@ import { db } from "@repo/database";
 vi.mock("@repo/database", () => ({
   db: {
     select: vi.fn(),
+    execute: vi.fn().mockResolvedValue({ rows: [] }),
   },
   eq: vi.fn(),
   and: vi.fn(),
+  sql: vi.fn(),
 }));
 
 vi.mock("@repo/database/schema", () => ({
@@ -47,13 +49,17 @@ describe("analytics.getSummary completion and duration", () => {
       fc.asyncProperty(
         fc.array(
           fc.record({
-            startedAt: fc.date({ min: new Date("2024-01-01T00:00:00.000Z"), max: new Date("2024-12-31T23:59:59.000Z") }),
-            durationSeconds: fc.integer({ min: 1, max: 3600 }).map(d => d * 1000), // ms
+            startedAt: fc.date({
+              min: new Date("2024-01-01T00:00:00.000Z"),
+              max: new Date("2024-12-31T23:59:59.000Z"),
+            }),
+            durationSeconds: fc.integer({ min: 1, max: 3600 }).map((d) => d * 1000),
             completed: fc.boolean(),
           }),
-          { minLength: 1, maxLength: 50 }
+          { minLength: 1, maxLength: 50 },
         ),
         async (responsesData) => {
+          fc.pre(responsesData.every((d) => !Number.isNaN(d.startedAt.getTime())));
           const formId = "9b2c6d5e-2345-6789-abcd-ef0123456789";
           const form = {
             id: formId,
@@ -68,27 +74,33 @@ describe("analytics.getSummary completion and duration", () => {
 
           const selectQueue: unknown[][] = [[form], responses];
 
+          let selectCall = 0;
           mockDb.select.mockImplementation(() => {
-            const chain = {
+            selectCall += 1;
+            if (selectCall === 1) {
+              return {
+                from: vi.fn().mockReturnThis(),
+                where: vi.fn().mockReturnThis(),
+                limit: vi.fn().mockImplementation(() => Promise.resolve(selectQueue.shift() ?? [])),
+              } as any;
+            }
+            return {
               from: vi.fn().mockReturnThis(),
-              where: vi.fn().mockReturnThis(),
-              limit: vi.fn().mockImplementation(() => Promise.resolve(selectQueue.shift() ?? [])),
-              then: (resolve: any) => resolve(selectQueue.shift() ?? []),
-            };
-            return chain as any;
+              where: vi.fn().mockImplementation(() => Promise.resolve(selectQueue.shift() ?? [])),
+            } as any;
           });
 
           const ctx = createContext();
           const caller = analyticsRouter.createCaller(ctx);
-          
+
           const result = await caller.getSummary({ formId });
 
           const completedCount = responsesData.filter((d) => d.completed).length;
           const expectedCompletionRate = (completedCount / responsesData.length) * 100;
-          
+
           const totalDuration = responsesData
             .filter((d) => d.completed)
-            .reduce((sum, d) => sum + (d.durationSeconds / 1000), 0);
+            .reduce((sum, d) => sum + d.durationSeconds / 1000, 0);
           const expectedAvgDuration = completedCount > 0 ? totalDuration / completedCount : 0;
 
           expect(result.totalResponses).toBe(responsesData.length);
@@ -96,9 +108,9 @@ describe("analytics.getSummary completion and duration", () => {
           expect(result.avgDurationSeconds).toBe(
             expectedAvgDuration === 0 ? null : Math.round(expectedAvgDuration),
           );
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     );
   });
 });

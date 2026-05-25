@@ -16,6 +16,8 @@ import {
 } from "@repo/trpc/server";
 
 import { env } from "./env";
+import { runHealthChecks } from "./health";
+import { correlationIdMiddleware } from "./middleware/correlation-id";
 
 export const app = express();
 const openApiDocument = generateOpenApiDocument(serverRouter, {
@@ -60,6 +62,7 @@ app.use(
   }),
 );
 
+app.use(correlationIdMiddleware);
 app.use(cookieParser());
 app.use(express.json());
 
@@ -91,8 +94,13 @@ app.get("/", (_req, res) => {
   return res.json({ message: "ChaiForms API is running" });
 });
 
-app.get("/health", (_req, res) => {
-  return res.json({ message: "ChaiForms API is healthy", healthy: true });
+app.get("/health", async (_req, res) => {
+  const { checks, healthy } = await runHealthChecks();
+  return res.status(healthy ? 200 : 503).json({
+    status: healthy ? "healthy" : "unhealthy",
+    message: healthy ? "ChaiForms API is healthy" : "ChaiForms API is degraded",
+    checks,
+  });
 });
 
 /** Issue CSRF token cookie for double-submit protection on tRPC mutations. */

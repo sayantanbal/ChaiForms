@@ -21,11 +21,14 @@ import {
   formsTable,
   responsesTable,
   answersTable,
+  answersV2Table,
   templatesTable,
   pagesTable,
   workspacesTable,
   workspaceMembersTable,
 } from "./schema";
+import { buildTypedAnswerRow } from "./utils/answer-value";
+import type { FieldSchemaUnion } from "@repo/schemas";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -53,7 +56,6 @@ const animeFormFields = [
     options: ["Shonen", "Shojo", "Isekai", "Mecha", "Slice of Life", "Horror"],
     placeholder: "Pick your favourite",
     description: "This will help us match your character!",
-
   },
   {
     id: "f1a00000-0000-0000-0000-000000000002",
@@ -80,15 +82,20 @@ const animeFormFields = [
     required: false,
     maxRating: 10,
     description: "1 = Solo hero, 10 = Friends are everything",
-
   },
   {
     id: "f1a00000-0000-0000-0000-000000000004",
     type: "multi_select" as const,
     label: "Which anime have you watched?",
     required: false,
-    options: ["Naruto", "One Piece", "Attack on Titan", "Demon Slayer", "Jujutsu Kaisen", "Dragon Ball Z"],
-
+    options: [
+      "Naruto",
+      "One Piece",
+      "Attack on Titan",
+      "Demon Slayer",
+      "Jujutsu Kaisen",
+      "Dragon Ball Z",
+    ],
   },
   {
     id: "f1a00000-0000-0000-0000-000000000005",
@@ -97,7 +104,6 @@ const animeFormFields = [
     required: false,
     placeholder: "e.g. Shadow Fist of Destiny",
     maxLength: 100,
-
   },
   {
     id: "f1a00000-0000-0000-0000-000000000006",
@@ -106,7 +112,6 @@ const animeFormFields = [
     required: false,
     placeholder: "hero@example.com",
     description: "We'll send your anime character result here!",
-
   },
 ];
 
@@ -118,7 +123,6 @@ const osFormFields = [
     required: true,
     options: ["Linux", "macOS", "Windows", "FreeBSD", "ChromeOS"],
     placeholder: "Your daily driver",
-
   },
   {
     id: "f2b00000-0000-0000-0000-000000000002",
@@ -144,7 +148,6 @@ const osFormFields = [
     label: "Rate your OS out of 10",
     required: true,
     maxRating: 10,
-
   },
   {
     id: "f2b00000-0000-0000-0000-000000000004",
@@ -152,7 +155,6 @@ const osFormFields = [
     label: "What do you use your OS for?",
     required: true,
     options: ["Development", "Gaming", "Design", "Office Work", "Server", "School"],
-
   },
   {
     id: "f2b00000-0000-0000-0000-000000000005",
@@ -161,14 +163,12 @@ const osFormFields = [
     required: false,
     placeholder: "Describe your dream feature...",
     maxLength: 500,
-
   },
   {
     id: "f2b00000-0000-0000-0000-000000000006",
     type: "checkbox" as const,
     label: "I use dark mode exclusively",
     required: false,
-
   },
 ];
 
@@ -180,7 +180,6 @@ const startupFormFields = [
     required: true,
     placeholder: "e.g. Uber for dog walking",
     maxLength: 200,
-
   },
   {
     id: "f3c00000-0000-0000-0000-000000000002",
@@ -188,7 +187,6 @@ const startupFormFields = [
     label: "Target market",
     required: true,
     options: ["B2B", "B2C", "B2B2C", "Government", "Non-profit"],
-
   },
   {
     id: "f3c00000-0000-0000-0000-000000000003",
@@ -198,7 +196,6 @@ const startupFormFields = [
     min: 1,
     max: 100000,
     placeholder: "e.g. 500",
-
   },
   {
     id: "f3c00000-0000-0000-0000-000000000004",
@@ -207,7 +204,6 @@ const startupFormFields = [
     required: true,
     maxRating: 10,
     description: "1 = Just brainstorming, 10 = Ready to quit my job",
-
   },
   {
     id: "f3c00000-0000-0000-0000-000000000005",
@@ -215,7 +211,6 @@ const startupFormFields = [
     label: "What challenges do you foresee?",
     required: false,
     options: ["Funding", "Team", "Technical", "Market Timing", "Competition", "Regulation"],
-
   },
   {
     id: "f3c00000-0000-0000-0000-000000000006",
@@ -223,7 +218,6 @@ const startupFormFields = [
     label: "Your email for feedback",
     required: false,
     placeholder: "founder@startup.com",
-
   },
 ];
 
@@ -354,10 +348,7 @@ async function seed() {
     console.log("  ✓ Demo workspace exists:", demoWorkspace.id);
   }
 
-  const ensureMember = async (
-    userId: string,
-    role: "admin" | "creator" | "viewer",
-  ) => {
+  const ensureMember = async (userId: string, role: "admin" | "creator" | "viewer") => {
     const existing = await db
       .select()
       .from(workspaceMembersTable)
@@ -395,7 +386,8 @@ async function seed() {
     },
     {
       title: "Rate Your Favorite OS",
-      description: "Share your operating system preferences and help us understand the developer community.",
+      description:
+        "Share your operating system preferences and help us understand the developer community.",
       theme: "os" as const,
       fields: osFormFields,
     },
@@ -425,7 +417,7 @@ async function seed() {
     },
   ];
 
-  const templates: typeof templatesTable.$inferSelect[] = [];
+  const templates: (typeof templatesTable.$inferSelect)[] = [];
   for (const tDef of templateDefs) {
     const existing = await db
       .select()
@@ -514,7 +506,7 @@ async function seed() {
     },
   ];
 
-  const seededForms: typeof formsTable.$inferSelect[] = [];
+  const seededForms: (typeof formsTable.$inferSelect)[] = [];
 
   for (const fDef of formDefs) {
     let form = await db
@@ -611,12 +603,22 @@ async function seed() {
 
   const animeGenres = ["Shonen", "Shojo", "Isekai", "Mecha", "Slice of Life"];
   const fightingStyles = ["Brute Force", "Strategy", "Speed", "Magic", "Teamwork"];
-  const animeShows = [["Naruto", "Demon Slayer"], ["One Piece", "Jujutsu Kaisen"], ["Attack on Titan"], ["Dragon Ball Z", "Naruto", "One Piece"]];
+  const animeShows = [
+    ["Naruto", "Demon Slayer"],
+    ["One Piece", "Jujutsu Kaisen"],
+    ["Attack on Titan"],
+    ["Dragon Ball Z", "Naruto", "One Piece"],
+  ];
   const specialMoves = ["Shadow Fist", "Dragon Burst", "Wind Slash", "Thunder Wave", "Void Step"];
 
   const osDailies = ["Linux", "macOS", "Windows", "Linux", "macOS"];
   const linuxDistros = ["Ubuntu", "Arch Linux", "Fedora", "Debian", "NixOS"];
-  const osUses = [["Development", "Gaming"], ["Office Work"], ["Development", "Server"], ["Design", "School"]];
+  const osUses = [
+    ["Development", "Gaming"],
+    ["Office Work"],
+    ["Development", "Server"],
+    ["Design", "School"],
+  ];
 
   const startupIdeas = [
     "AI-powered personal finance coach",
@@ -626,7 +628,12 @@ async function seed() {
     "Marketplace for local farm produce",
   ];
   const markets = ["B2B", "B2C", "B2B2C"];
-  const challenges = [["Funding", "Team"], ["Technical", "Competition"], ["Regulation"], ["Market Timing", "Funding"]];
+  const challenges = [
+    ["Funding", "Team"],
+    ["Technical", "Competition"],
+    ["Regulation"],
+    ["Market Timing", "Funding"],
+  ];
 
   for (let fi = 0; fi < seededForms.length; fi++) {
     const form = seededForms[fi]!;
@@ -669,36 +676,115 @@ async function seed() {
         // Anime form
         const genre = randomElement(animeGenres);
         answers = [
-          { responseId: response.id, fieldId: "f1a00000-0000-0000-0000-000000000001", value: genre },
-          ...(genre === "Shonen" ? [{ responseId: response.id, fieldId: "f1a00000-0000-0000-0000-000000000002", value: randomElement(fightingStyles) }] : []),
-          { responseId: response.id, fieldId: "f1a00000-0000-0000-0000-000000000003", value: String(Math.floor(Math.random() * 7) + 3) },
-          { responseId: response.id, fieldId: "f1a00000-0000-0000-0000-000000000004", value: JSON.stringify(randomElement(animeShows)) },
-          { responseId: response.id, fieldId: "f1a00000-0000-0000-0000-000000000005", value: randomElement(specialMoves) },
-          { responseId: response.id, fieldId: "f1a00000-0000-0000-0000-000000000006", value: `user${i}@example.com` },
+          {
+            responseId: response.id,
+            fieldId: "f1a00000-0000-0000-0000-000000000001",
+            value: genre,
+          },
+          ...(genre === "Shonen"
+            ? [
+                {
+                  responseId: response.id,
+                  fieldId: "f1a00000-0000-0000-0000-000000000002",
+                  value: randomElement(fightingStyles),
+                },
+              ]
+            : []),
+          {
+            responseId: response.id,
+            fieldId: "f1a00000-0000-0000-0000-000000000003",
+            value: String(Math.floor(Math.random() * 7) + 3),
+          },
+          {
+            responseId: response.id,
+            fieldId: "f1a00000-0000-0000-0000-000000000004",
+            value: JSON.stringify(randomElement(animeShows)),
+          },
+          {
+            responseId: response.id,
+            fieldId: "f1a00000-0000-0000-0000-000000000005",
+            value: randomElement(specialMoves),
+          },
+          {
+            responseId: response.id,
+            fieldId: "f1a00000-0000-0000-0000-000000000006",
+            value: `user${i}@example.com`,
+          },
         ];
       } else if (fi === 1) {
         // OS form
         const os = randomElement(osDailies);
         answers = [
           { responseId: response.id, fieldId: "f2b00000-0000-0000-0000-000000000001", value: os },
-          ...(os === "Linux" ? [{ responseId: response.id, fieldId: "f2b00000-0000-0000-0000-000000000002", value: randomElement(linuxDistros) }] : []),
-          { responseId: response.id, fieldId: "f2b00000-0000-0000-0000-000000000003", value: String(Math.floor(Math.random() * 4) + 6) },
-          { responseId: response.id, fieldId: "f2b00000-0000-0000-0000-000000000004", value: JSON.stringify(randomElement(osUses)) },
-          { responseId: response.id, fieldId: "f2b00000-0000-0000-0000-000000000006", value: "true" },
+          ...(os === "Linux"
+            ? [
+                {
+                  responseId: response.id,
+                  fieldId: "f2b00000-0000-0000-0000-000000000002",
+                  value: randomElement(linuxDistros),
+                },
+              ]
+            : []),
+          {
+            responseId: response.id,
+            fieldId: "f2b00000-0000-0000-0000-000000000003",
+            value: String(Math.floor(Math.random() * 4) + 6),
+          },
+          {
+            responseId: response.id,
+            fieldId: "f2b00000-0000-0000-0000-000000000004",
+            value: JSON.stringify(randomElement(osUses)),
+          },
+          {
+            responseId: response.id,
+            fieldId: "f2b00000-0000-0000-0000-000000000006",
+            value: "true",
+          },
         ];
       } else {
         // Startup form
         answers = [
-          { responseId: response.id, fieldId: "f3c00000-0000-0000-0000-000000000001", value: randomElement(startupIdeas) },
-          { responseId: response.id, fieldId: "f3c00000-0000-0000-0000-000000000002", value: randomElement(markets) },
-          { responseId: response.id, fieldId: "f3c00000-0000-0000-0000-000000000003", value: String(Math.floor(Math.random() * 900) + 100) },
-          { responseId: response.id, fieldId: "f3c00000-0000-0000-0000-000000000004", value: String(Math.floor(Math.random() * 5) + 5) },
-          { responseId: response.id, fieldId: "f3c00000-0000-0000-0000-000000000005", value: JSON.stringify(randomElement(challenges)) },
+          {
+            responseId: response.id,
+            fieldId: "f3c00000-0000-0000-0000-000000000001",
+            value: randomElement(startupIdeas),
+          },
+          {
+            responseId: response.id,
+            fieldId: "f3c00000-0000-0000-0000-000000000002",
+            value: randomElement(markets),
+          },
+          {
+            responseId: response.id,
+            fieldId: "f3c00000-0000-0000-0000-000000000003",
+            value: String(Math.floor(Math.random() * 900) + 100),
+          },
+          {
+            responseId: response.id,
+            fieldId: "f3c00000-0000-0000-0000-000000000004",
+            value: String(Math.floor(Math.random() * 5) + 5),
+          },
+          {
+            responseId: response.id,
+            fieldId: "f3c00000-0000-0000-0000-000000000005",
+            value: JSON.stringify(randomElement(challenges)),
+          },
         ];
       }
 
       if (answers.length > 0) {
         await db.insert(answersTable).values(answers);
+        const fieldById = new Map(
+          ((form.fields as FieldSchemaUnion[]) ?? []).map((f) => [f.id, f]),
+        );
+        await db.insert(answersV2Table).values(
+          answers.map((a) =>
+            buildTypedAnswerRow(a.responseId, fieldById.get(a.fieldId), {
+              fieldId: a.fieldId,
+              value: a.value,
+            }),
+          ),
+        );
       }
     }
 

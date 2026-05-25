@@ -1,19 +1,37 @@
 services:
-  postgresdb:
-    image: postgres:15
-    restart: unless-stopped
-    container_name: postgresdb
-
+  postgres:
+    image: postgres:15-alpine
     environment:
+      POSTGRES_DB: chaiforms
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: dev
-
     ports:
       - "5432:5432"
-
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d chaiforms"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "8000:8080"
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/chaiforms
+      JWT_SECRET: local-docker-jwt-secret-min-32-chars
+      CSRF_SECRET: local-docker-csrf-secret-min-32-chars
+      BASE_URL: http://localhost:8000
+      WEB_ORIGIN: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
-  pg_data:
+  postgres_data:

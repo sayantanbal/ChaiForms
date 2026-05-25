@@ -1,9 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { db, eq, and, count, desc, gte, lte, isNull } from "@repo/database";
+import { buildTypedAnswerRow, fetchDisplayAnswersForResponses } from "@repo/database";
 import {
   formsTable,
   responsesTable,
   answersTable,
+  answersV2Table,
   usersTable,
 } from "@repo/database/schema";
 import { notificationService } from "@repo/services/notification";
@@ -12,10 +14,7 @@ import { z } from "zod";
 
 import { publicProcedure, protectedProcedure, router } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
-import {
-  buildRateLimitKey,
-  parseClientContext,
-} from "../../utils/client-context";
+import { buildRateLimitKey, parseClientContext } from "../../utils/client-context";
 import { assertSubmitRateLimit } from "../../utils/submit-rate-limit";
 import { verifyUnlockToken } from "../../utils/jwt";
 import { broadcastDelta } from "../../utils/analytics-broadcast";
@@ -221,18 +220,13 @@ export const responsesRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const client = parseClientContext(ctx.req, input.clientContext);
-      const rateLimitKey = buildRateLimitKey(
-        client.ipAddress,
-        client.deviceFingerprint,
-      );
+      const rateLimitKey = buildRateLimitKey(client.ipAddress, client.deviceFingerprint);
       await assertSubmitRateLimit(rateLimitKey);
 
       const [form] = await db
         .select()
         .from(formsTable)
-        .where(
-          and(eq(formsTable.id, input.formId), isNull(formsTable.deletedAt)),
-        )
+        .where(and(eq(formsTable.id, input.formId), isNull(formsTable.deletedAt)))
         .limit(1);
 
       if (!form) {
@@ -268,10 +262,7 @@ export const responsesRouter = router({
       }
 
       if (form.accessPasswordHash) {
-        if (
-          !input.unlockToken ||
-          !verifyUnlockToken(input.unlockToken, form.id)
-        ) {
+        if (!input.unlockToken || !verifyUnlockToken(input.unlockToken, form.id)) {
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Valid unlock token required",
@@ -286,7 +277,9 @@ export const responsesRouter = router({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: `Validation failed: ${validationErrors.map((e) => `${e.fieldId}: ${e.reason}`).join("; ")}`,
-          cause: { fieldErrors: Object.fromEntries(validationErrors.map((e) => [e.fieldId, e.reason])) },
+          cause: {
+            fieldErrors: Object.fromEntries(validationErrors.map((e) => [e.fieldId, e.reason])),
+          },
         });
       }
 
@@ -329,8 +322,9 @@ export const responsesRouter = router({
         });
       }
 
-      // Bulk-insert answers
+      // Bulk-insert answers (legacy + typed v2)
       if (input.answers.length > 0) {
+        const fieldById = new Map(fields.map((f) => [f.id, f]));
         await db.insert(answersTable).values(
           input.answers.map((a) => ({
             responseId: response.id,
@@ -338,6 +332,11 @@ export const responsesRouter = router({
             value: a.value,
           })),
         );
+        await db
+          .insert(answersV2Table)
+          .values(
+            input.answers.map((a) => buildTypedAnswerRow(response.id, fieldById.get(a.fieldId), a)),
+          );
       }
 
       const [creator] = await db
@@ -348,9 +347,7 @@ export const responsesRouter = router({
 
       if (creator?.email) {
         const webBaseUrl =
-          process.env.WEB_ORIGIN ??
-          process.env.NEXT_PUBLIC_WEB_BASE_URL ??
-          "http://localhost:3000";
+          process.env.WEB_ORIGIN ?? process.env.NEXT_PUBLIC_WEB_BASE_URL ?? "http://localhost:3000";
 
         notificationService.sendSubmissionEmails({
           creatorEmail: creator.email,
@@ -393,12 +390,7 @@ export const responsesRouter = router({
       const [form] = await db
         .select({ id: formsTable.id })
         .from(formsTable)
-        .where(
-          and(
-            eq(formsTable.id, input.formId),
-            eq(formsTable.creatorId, ctx.user.id),
-          ),
-        )
+        .where(and(eq(formsTable.id, input.formId), eq(formsTable.creatorId, ctx.user.id)))
         .limit(1);
 
       if (!form) {
@@ -429,27 +421,8 @@ export const responsesRouter = router({
           .offset(offset),
       ]);
 
-      // Fetch answers for these responses
       const responseIds = responses.map((r) => r.id);
-      const answers =
-        responseIds.length > 0
-          ? await db
-              .select()
-              .from(answersTable)
-              .where(
-                responseIds.length === 1
-                  ? eq(answersTable.responseId, responseIds[0]!)
-                  : and(...responseIds.map((id) => eq(answersTable.responseId, id))),
-              )
-          : [];
-
-      const answersByResponse = new Map<string, typeof answers>();
-      for (const answer of answers) {
-        if (!answersByResponse.has(answer.responseId)) {
-          answersByResponse.set(answer.responseId, []);
-        }
-        answersByResponse.get(answer.responseId)!.push(answer);
-      }
+      const answersByResponse = await fetchDisplayAnswersForResponses(responseIds);
 
       return {
         items: responses.map((r) => ({
@@ -458,11 +431,7 @@ export const responsesRouter = router({
           startedAt: r.startedAt.toISOString(),
           submittedAt: r.submittedAt.toISOString(),
           respondentEmail: r.respondentEmail,
-          answers: (answersByResponse.get(r.id) ?? []).map((a) => ({
-            id: a.id,
-            fieldId: a.fieldId,
-            value: a.value,
-          })),
+          answers: answersByResponse.get(r.id) ?? [],
         })),
         total: Number(totalResult[0]?.count ?? 0),
         page: input.page,
@@ -483,12 +452,7 @@ export const responsesRouter = router({
       const [form] = await db
         .select()
         .from(formsTable)
-        .where(
-          and(
-            eq(formsTable.id, input.formId),
-            eq(formsTable.creatorId, ctx.user.id),
-          ),
-        )
+        .where(and(eq(formsTable.id, input.formId), eq(formsTable.creatorId, ctx.user.id)))
         .limit(1);
 
       if (!form) {
@@ -503,32 +467,9 @@ export const responsesRouter = router({
         .where(eq(responsesTable.formId, input.formId))
         .orderBy(responsesTable.submittedAt);
 
-      const allAnswers =
-        responses.length > 0
-          ? await db
-              .select()
-              .from(answersTable)
-              .where(
-                responses.length === 1
-                  ? eq(answersTable.responseId, responses[0]!.id)
-                  : and(
-                      ...responses.map((r) =>
-                        eq(answersTable.responseId, r.id),
-                      ),
-                    ),
-              )
-          : [];
+      const answersByResponse = await fetchDisplayAnswersForResponses(responses.map((r) => r.id));
 
-      const answersByResponse = new Map<string, Map<string, string>>();
-      for (const answer of allAnswers) {
-        if (!answersByResponse.has(answer.responseId)) {
-          answersByResponse.set(answer.responseId, new Map());
-        }
-        answersByResponse.get(answer.responseId)!.set(answer.fieldId, answer.value);
-      }
-
-      const escCsv = (v: string) =>
-        `"${v.replace(/"/g, '""').replace(/\n/g, " ")}"`;
+      const escCsv = (v: string) => `"${v.replace(/"/g, '""').replace(/\n/g, " ")}"`;
 
       const headers = [
         "Response ID",
@@ -538,7 +479,8 @@ export const responsesRouter = router({
       ].join(",");
 
       const rows = responses.map((r) => {
-        const ansMap = answersByResponse.get(r.id) ?? new Map();
+        const ansList = answersByResponse.get(r.id) ?? [];
+        const ansMap = new Map(ansList.map((a) => [a.fieldId, a.value]));
         return [
           r.id,
           r.submittedAt.toISOString(),

@@ -3,11 +3,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@repo/database", () => ({
   db: {
     select: vi.fn(),
+    execute: vi.fn().mockResolvedValue({ rows: [] }),
   },
   eq: vi.fn(),
   and: vi.fn(),
   count: vi.fn(),
-  sql: vi.fn(),
+  sql: vi.fn((strings: TemplateStringsArray, ...values: unknown[]) => ({
+    strings,
+    values,
+  })),
 }));
 
 vi.mock("@repo/database/schema", () => ({
@@ -23,6 +27,15 @@ vi.mock("@repo/database/schema", () => ({
   answersTable: {
     fieldId: "fieldId",
     value: "value",
+    responseId: "responseId",
+  },
+  answersV2Table: {
+    fieldId: "fieldId",
+    valueText: "valueText",
+    valueNumber: "valueNumber",
+    valueDate: "valueDate",
+    valueBoolean: "valueBoolean",
+    valueJson: "valueJson",
     responseId: "responseId",
   },
 }));

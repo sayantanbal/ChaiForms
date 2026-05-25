@@ -1,16 +1,13 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { db, eq, and, sql, count } from "@repo/database";
-import { formsTable, responsesTable, answersTable } from "@repo/database/schema";
+import { formsTable, responsesTable, answersTable, answersV2Table } from "@repo/database/schema";
 import { analyticsSummarySchema, fieldBreakdownItemSchema } from "@repo/schemas";
 import type { FieldSchemaUnion } from "@repo/schemas";
 
 import { protectedProcedure, router } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
-import {
-  computeCompletionRate,
-  computeAvgDuration,
-} from "../../utils/analytics";
+import { computeCompletionRate, computeAvgDuration } from "../../utils/analytics";
 
 const TAGS = ["Analytics"];
 const getPath = generatePath("/analytics");
@@ -30,12 +27,7 @@ export const analyticsRouter = router({
       const [form] = await db
         .select()
         .from(formsTable)
-        .where(
-          and(
-            eq(formsTable.id, input.formId),
-            eq(formsTable.creatorId, ctx.user.id),
-          ),
-        )
+        .where(and(eq(formsTable.id, input.formId), eq(formsTable.creatorId, ctx.user.id)))
         .limit(1);
 
       if (!form) {
@@ -53,9 +45,35 @@ export const analyticsRouter = router({
         .from(responsesTable)
         .where(eq(responsesTable.formId, input.formId));
 
-      const totalResponses = responses.length;
+      let totalResponses = responses.length;
+      let avgDurationSeconds = computeAvgDuration(responses);
+
+      try {
+        const statsResult = await db.execute(sql`
+          SELECT total_responses, avg_duration_seconds
+          FROM form_summary_stats
+          WHERE form_id = ${input.formId}
+          LIMIT 1
+        `);
+        const rows =
+          statsResult &&
+          typeof statsResult === "object" &&
+          "rows" in statsResult &&
+          Array.isArray((statsResult as { rows: unknown[] }).rows)
+            ? (statsResult as { rows: Array<Record<string, unknown>> }).rows
+            : [];
+        const statsRow = rows[0];
+        if (statsRow) {
+          totalResponses = Number(statsRow.total_responses ?? totalResponses);
+          const avg = statsRow.avg_duration_seconds;
+          avgDurationSeconds =
+            avg !== null && avg !== undefined ? Math.round(Number(avg)) : avgDurationSeconds;
+        }
+      } catch {
+        // Materialized view not migrated yet
+      }
+
       const completionRate = computeCompletionRate(responses);
-      const avgDurationSeconds = computeAvgDuration(responses);
 
       return {
         totalResponses,
@@ -81,12 +99,7 @@ export const analyticsRouter = router({
       const [form] = await db
         .select()
         .from(formsTable)
-        .where(
-          and(
-            eq(formsTable.id, input.formId),
-            eq(formsTable.creatorId, ctx.user.id),
-          ),
-        )
+        .where(and(eq(formsTable.id, input.formId), eq(formsTable.creatorId, ctx.user.id)))
         .limit(1);
 
       if (!form) {
@@ -95,20 +108,37 @@ export const analyticsRouter = router({
 
       const fields = (form.fields as FieldSchemaUnion[]) ?? [];
 
-      // Aggregate answers grouped by fieldId + value
-      const rows = await db
+      const displayValue = sql<string>`coalesce(
+        ${answersV2Table.valueText},
+        ${answersV2Table.valueNumber}::text,
+        ${answersV2Table.valueBoolean}::text,
+        to_char(${answersV2Table.valueDate}, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"),
+        ${answersV2Table.valueJson}::text
+      )`;
+
+      let rows = await db
         .select({
-          fieldId: answersTable.fieldId,
-          value: answersTable.value,
+          fieldId: answersV2Table.fieldId,
+          value: displayValue,
           cnt: count(),
         })
-        .from(answersTable)
-        .innerJoin(
-          responsesTable,
-          eq(answersTable.responseId, responsesTable.id),
-        )
+        .from(answersV2Table)
+        .innerJoin(responsesTable, eq(answersV2Table.responseId, responsesTable.id))
         .where(eq(responsesTable.formId, input.formId))
-        .groupBy(answersTable.fieldId, answersTable.value);
+        .groupBy(answersV2Table.fieldId, displayValue);
+
+      if (rows.length === 0) {
+        rows = await db
+          .select({
+            fieldId: answersTable.fieldId,
+            value: answersTable.value,
+            cnt: count(),
+          })
+          .from(answersTable)
+          .innerJoin(responsesTable, eq(answersTable.responseId, responsesTable.id))
+          .where(eq(responsesTable.formId, input.formId))
+          .groupBy(answersTable.fieldId, answersTable.value);
+      }
 
       // Build breakdown per field
       const byField = new Map<
@@ -123,7 +153,12 @@ export const analyticsRouter = router({
         const entry = byField.get(row.fieldId)!;
         const cnt = Number(row.cnt);
         entry.responseCount += cnt;
-        entry.distribution[row.value] = cnt;
+        Object.defineProperty(entry.distribution, row.value, {
+          value: cnt,
+          enumerable: true,
+          configurable: true,
+          writable: true,
+        });
       }
 
       return fields.map((field) => {
@@ -162,12 +197,7 @@ export const analyticsRouter = router({
       const [form] = await db
         .select({ id: formsTable.id })
         .from(formsTable)
-        .where(
-          and(
-            eq(formsTable.id, input.formId),
-            eq(formsTable.creatorId, ctx.user.id),
-          ),
-        )
+        .where(and(eq(formsTable.id, input.formId), eq(formsTable.creatorId, ctx.user.id)))
         .limit(1);
 
       if (!form) {
@@ -181,12 +211,8 @@ export const analyticsRouter = router({
         })
         .from(responsesTable)
         .where(eq(responsesTable.formId, input.formId))
-        .groupBy(
-          sql`DATE_TRUNC(${input.granularity}, ${responsesTable.submittedAt})`,
-        )
-        .orderBy(
-          sql`DATE_TRUNC(${input.granularity}, ${responsesTable.submittedAt})`,
-        );
+        .groupBy(sql`DATE_TRUNC(${input.granularity}, ${responsesTable.submittedAt})`)
+        .orderBy(sql`DATE_TRUNC(${input.granularity}, ${responsesTable.submittedAt})`);
 
       return rows.map((r) => ({ date: r.date, count: Number(r.count) }));
     }),

@@ -10,7 +10,6 @@
     "lint": "eslint src/*"
   },
   "devDependencies": {
-    "@repo/database": "workspace:*",
     "@repo/eslint-config": "workspace:*",
     "@repo/services": "workspace:*",
     "@repo/typescript-config": "workspace:*",
@@ -30,6 +29,8 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@repo/database": "workspace:*",
+    "drizzle-orm": "^0.45.1",
     "@repo/logger": "workspace:*",
     "@repo/schemas": "workspace:*",
     "@repo/trpc": "workspace:*",
