@@ -23,7 +23,7 @@ export const app = express();
 const openApiDocument = generateOpenApiDocument(serverRouter, {
   title: "ChaiForms API",
   version: "1.0.0",
-  baseUrl: env.BASE_URL.concat("/api"),
+  baseUrl: env.BASE_URL.concat("/api/v1"),
 });
 
 const isProd = env.NODE_ENV === "production";
@@ -128,7 +128,7 @@ logger.debug(`docs: ${env.BASE_URL}/docs`);
 app.use("/docs", apiLimiter, apiReference({ url: "/openapi.json" }));
 
 app.use(
-  "/api",
+  "/api/v1",
   apiLimiter,
   createOpenApiExpressMiddleware({
     router: serverRouter,

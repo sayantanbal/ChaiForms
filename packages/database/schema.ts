@@ -8,3 +8,5 @@ export * from "./models/response";
 export * from "./models/answer";
 export * from "./models/answer-v2";
 export * from "./models/template";
+export * from "./models/api-key";
+export * from "./models/webhook";

@@ -24,6 +24,8 @@
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
     "pg": "^8.16.3",
-    "zod": "^4.3.5"
+    "zod": "^4.3.5",
+    "@paralleldrive/cuid2": "^2.2.2",
+    "@repo/types": "workspace:*"
   }
 }

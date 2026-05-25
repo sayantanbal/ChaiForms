@@ -24,7 +24,7 @@ export default function WorkspaceDetailPage() {
       setEmail("");
       void refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e.message),
   });
 
   const removeMemberMutation = trpc.workspaces.removeMember.useMutation({
@@ -32,7 +32,7 @@ export default function WorkspaceDetailPage() {
       toast.success("Member removed");
       void refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e.message),
   });
 
   const updateRoleMutation = trpc.workspaces.updateMemberRole.useMutation({
@@ -40,21 +40,28 @@ export default function WorkspaceDetailPage() {
       toast.success("Role updated");
       void refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e.message),
   });
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <Link
-          href="/dashboard/workspaces"
-          className="text-sm text-gray-500 hover:text-white"
-        >
-          ← Workspaces
-        </Link>
-        <h1 className="text-2xl font-bold mt-2">{workspace?.name ?? "..."}</h1>
-        {workspace?.description && (
-          <p className="text-gray-400 text-sm mt-1">{workspace.description}</p>
+      <div className="mb-6 flex justify-between items-start">
+        <div>
+          <Link href="/dashboard/workspaces" className="text-sm text-gray-500 hover:text-white">
+            ← Workspaces
+          </Link>
+          <h1 className="text-2xl font-bold mt-2">{workspace?.name ?? "..."}</h1>
+          {workspace?.description && (
+            <p className="text-gray-400 text-sm mt-1">{workspace.description}</p>
+          )}
+        </div>
+        {isAdmin && (
+          <Link
+            href={`/dashboard/workspaces/${workspaceId}/developer`}
+            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 border border-white/10"
+          >
+            <span>⚙️</span> Developer Settings
+          </Link>
         )}
       </div>
 
@@ -80,9 +87,7 @@ export default function WorkspaceDetailPage() {
           />
           <select
             value={role}
-            onChange={(e) =>
-              setRole(e.target.value as "admin" | "creator" | "viewer")
-            }
+            onChange={(e) => setRole(e.target.value as "admin" | "creator" | "viewer")}
             className="px-3 py-2 rounded-lg bg-gray-900 border border-white/10 text-sm"
           >
             <option value="creator">Creator</option>

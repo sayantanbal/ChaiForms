@@ -1,11 +1,4 @@
-import {
-  pgTable,
-  uuid,
-  varchar,
-  text,
-  timestamp,
-  index,
-} from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, timestamp, index } from "drizzle-orm/pg-core";
 import { usersTable } from "./user";
 
 export const workspacesTable = pgTable(
@@ -25,3 +18,12 @@ export const workspacesTable = pgTable(
 
 export type SelectWorkspace = typeof workspacesTable.$inferSelect;
 export type InsertWorkspace = typeof workspacesTable.$inferInsert;
+
+import { relations } from "drizzle-orm";
+import { apiKeys } from "./api-key";
+import { webhooks } from "./webhook";
+
+export const workspacesRelations = relations(workspacesTable, ({ many }) => ({
+  apiKeys: many(apiKeys),
+  webhooks: many(webhooks),
+}));

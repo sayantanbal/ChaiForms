@@ -1,18 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { db, eq, and } from "@repo/database";
-import {
-  workspacesTable,
-  workspaceMembersTable,
-  usersTable,
-} from "@repo/database/schema";
+import { workspacesTable, workspaceMembersTable, usersTable } from "@repo/database/schema";
 import { notificationService } from "@repo/services/notification";
 
-import {
-  protectedProcedure,
-  router,
-  workspaceAdminProcedure,
-} from "../../trpc";
+import { protectedProcedure, router, workspaceAdminProcedure } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
 import { zodUndefinedModel } from "../../schema";
 
@@ -157,10 +149,7 @@ export const workspacesRouter = router({
           role: workspaceMembersTable.role,
         })
         .from(workspaceMembersTable)
-        .innerJoin(
-          workspacesTable,
-          eq(workspaceMembersTable.workspaceId, workspacesTable.id),
-        )
+        .innerJoin(workspacesTable, eq(workspaceMembersTable.workspaceId, workspacesTable.id))
         .where(eq(workspaceMembersTable.userId, ctx.user.id));
 
       const byId = new Map<string, z.infer<typeof workspaceOutputSchema>>();
@@ -189,10 +178,7 @@ export const workspacesRouter = router({
     .input(z.object({ workspaceId: z.string().uuid() }))
     .output(workspaceOutputSchema)
     .query(async ({ input, ctx }) => {
-      const member = await assertWorkspaceMember(
-        input.workspaceId,
-        ctx.user.id,
-      );
+      const member = await assertWorkspaceMember(input.workspaceId, ctx.user.id);
       const [workspace] = await db
         .select()
         .from(workspacesTable)
@@ -203,8 +189,7 @@ export const workspacesRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Workspace not found" });
       }
 
-      const role =
-        workspace.ownerId === ctx.user.id ? "admin" : member!.role;
+      const role = workspace.ownerId === ctx.user.id ? "admin" : member!.role;
 
       return mapWorkspace(workspace, role);
     }),
@@ -292,9 +277,7 @@ export const workspacesRouter = router({
       }
 
       const webBaseUrl =
-        process.env.WEB_ORIGIN ??
-        process.env.NEXT_PUBLIC_WEB_BASE_URL ??
-        "http://localhost:3000";
+        process.env.WEB_ORIGIN ?? process.env.NEXT_PUBLIC_WEB_BASE_URL ?? "http://localhost:3000";
 
       notificationService.sendWorkspaceInviteEmail({
         inviteeEmail: user.email,
@@ -312,9 +295,7 @@ export const workspacesRouter = router({
         fullName: user.fullName,
         role: member.role,
         invitedAt: member.invitedAt ? member.invitedAt.toISOString() : null,
-        acceptedAt: member.acceptedAt
-          ? member.acceptedAt.toISOString()
-          : null,
+        acceptedAt: member.acceptedAt ? member.acceptedAt.toISOString() : null,
       };
     }),
 
@@ -430,9 +411,7 @@ export const workspacesRouter = router({
         fullName: user.fullName,
         role: updated.role,
         invitedAt: updated.invitedAt ? updated.invitedAt.toISOString() : null,
-        acceptedAt: updated.acceptedAt
-          ? updated.acceptedAt.toISOString()
-          : null,
+        acceptedAt: updated.acceptedAt ? updated.acceptedAt.toISOString() : null,
       };
     }),
 
@@ -469,22 +448,16 @@ export const workspacesRouter = router({
         .where(eq(workspaceMembersTable.workspaceId, input.workspaceId));
 
       const ownerInList = members.some((m) => m.user.id === workspace.ownerId);
-      const results: z.infer<typeof workspaceMemberOutputSchema>[] = members.map(
-        (row) => ({
-          id: row.member.id,
-          workspaceId: row.member.workspaceId,
-          userId: row.member.userId,
-          email: row.user.email,
-          fullName: row.user.fullName,
-          role: row.member.role,
-          invitedAt: row.member.invitedAt
-            ? row.member.invitedAt.toISOString()
-            : null,
-          acceptedAt: row.member.acceptedAt
-            ? row.member.acceptedAt.toISOString()
-            : null,
-        }),
-      );
+      const results: z.infer<typeof workspaceMemberOutputSchema>[] = members.map((row) => ({
+        id: row.member.id,
+        workspaceId: row.member.workspaceId,
+        userId: row.member.userId,
+        email: row.user.email,
+        fullName: row.user.fullName,
+        role: row.member.role,
+        invitedAt: row.member.invitedAt ? row.member.invitedAt.toISOString() : null,
+        acceptedAt: row.member.acceptedAt ? row.member.acceptedAt.toISOString() : null,
+      }));
 
       if (!ownerInList) {
         const [owner] = await db
@@ -501,17 +474,246 @@ export const workspacesRouter = router({
             email: owner.email,
             fullName: owner.fullName,
             role: "admin",
-            invitedAt: workspace.createdAt
-              ? workspace.createdAt.toISOString()
-              : null,
-            acceptedAt: workspace.createdAt
-              ? workspace.createdAt.toISOString()
-              : null,
+            invitedAt: workspace.createdAt ? workspace.createdAt.toISOString() : null,
+            acceptedAt: workspace.createdAt ? workspace.createdAt.toISOString() : null,
           });
         }
       }
 
       return results;
+    }),
+
+  createApiKey: workspaceAdminProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: getPath("/{workspaceId}/api-keys"),
+        tags: TAGS,
+      },
+    })
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+        name: z.string().min(1).max(100),
+      }),
+    )
+    .output(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        rawKey: z.string(),
+        createdAt: z.string().datetime(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const { randomBytes, createHash } = await import("node:crypto");
+
+      // Generate a new random API key
+      const rawKey = `cf_${randomBytes(24).toString("base64url")}`;
+      const keyHash = createHash("sha256").update(rawKey).digest("hex");
+
+      const { apiKeys } = await import("@repo/database/schema");
+
+      const [apiKey] = await db
+        .insert(apiKeys)
+        .values({
+          workspaceId: input.workspaceId,
+          name: input.name,
+          keyHash,
+        })
+        .returning();
+
+      if (!apiKey) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create API key" });
+      }
+
+      return {
+        id: apiKey.id,
+        name: apiKey.name,
+        rawKey,
+        createdAt: apiKey.createdAt.toISOString(),
+      };
+    }),
+
+  listApiKeys: workspaceAdminProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: getPath("/{workspaceId}/api-keys"),
+        tags: TAGS,
+      },
+    })
+    .input(z.object({ workspaceId: z.string().uuid() }))
+    .output(
+      z.array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          lastUsedAt: z.string().datetime().nullable(),
+          createdAt: z.string().datetime(),
+        }),
+      ),
+    )
+    .query(async ({ input }) => {
+      const { apiKeys } = await import("@repo/database/schema");
+
+      const keys = await db
+        .select()
+        .from(apiKeys)
+        .where(eq(apiKeys.workspaceId, input.workspaceId))
+        .orderBy(apiKeys.createdAt);
+
+      return keys.map((key) => ({
+        id: key.id,
+        name: key.name,
+        lastUsedAt: key.lastUsedAt ? key.lastUsedAt.toISOString() : null,
+        createdAt: key.createdAt.toISOString(),
+      }));
+    }),
+
+  revokeApiKey: workspaceAdminProcedure
+    .meta({
+      openapi: {
+        method: "DELETE",
+        path: getPath("/{workspaceId}/api-keys/{keyId}"),
+        tags: TAGS,
+      },
+    })
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+        keyId: z.string(),
+      }),
+    )
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ input }) => {
+      const { apiKeys } = await import("@repo/database/schema");
+
+      await db
+        .delete(apiKeys)
+        .where(and(eq(apiKeys.id, input.keyId), eq(apiKeys.workspaceId, input.workspaceId)));
+
+      return { success: true };
+    }),
+
+  createWebhook: workspaceAdminProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: getPath("/{workspaceId}/webhooks"),
+        tags: TAGS,
+      },
+    })
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+        url: z.string().url(),
+        events: z.array(z.string()).min(1),
+      }),
+    )
+    .output(
+      z.object({
+        id: z.string(),
+        url: z.string(),
+        secret: z.string(),
+        events: z.array(z.string()),
+        isActive: z.boolean(),
+        createdAt: z.string().datetime(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const { randomBytes } = await import("node:crypto");
+      const secret = `whsec_${randomBytes(24).toString("base64url")}`;
+
+      const { webhooks } = await import("@repo/database/schema");
+
+      const [webhook] = await db
+        .insert(webhooks)
+        .values({
+          workspaceId: input.workspaceId,
+          url: input.url,
+          secret,
+          events: input.events as any,
+        })
+        .returning();
+
+      if (!webhook) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create webhook" });
+      }
+
+      return {
+        id: webhook.id,
+        url: webhook.url,
+        secret: webhook.secret,
+        events: webhook.events as string[],
+        isActive: webhook.isActive,
+        createdAt: webhook.createdAt.toISOString(),
+      };
+    }),
+
+  listWebhooks: workspaceAdminProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: getPath("/{workspaceId}/webhooks"),
+        tags: TAGS,
+      },
+    })
+    .input(z.object({ workspaceId: z.string().uuid() }))
+    .output(
+      z.array(
+        z.object({
+          id: z.string(),
+          url: z.string(),
+          secret: z.string(),
+          events: z.array(z.string()),
+          isActive: z.boolean(),
+          createdAt: z.string().datetime(),
+        }),
+      ),
+    )
+    .query(async ({ input }) => {
+      const { webhooks } = await import("@repo/database/schema");
+
+      const hooks = await db
+        .select()
+        .from(webhooks)
+        .where(eq(webhooks.workspaceId, input.workspaceId))
+        .orderBy(webhooks.createdAt);
+
+      return hooks.map((hook) => ({
+        id: hook.id,
+        url: hook.url,
+        secret: hook.secret,
+        events: hook.events as string[],
+        isActive: hook.isActive,
+        createdAt: hook.createdAt.toISOString(),
+      }));
+    }),
+
+  deleteWebhook: workspaceAdminProcedure
+    .meta({
+      openapi: {
+        method: "DELETE",
+        path: getPath("/{workspaceId}/webhooks/{webhookId}"),
+        tags: TAGS,
+      },
+    })
+    .input(
+      z.object({
+        workspaceId: z.string().uuid(),
+        webhookId: z.string(),
+      }),
+    )
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ input }) => {
+      const { webhooks } = await import("@repo/database/schema");
+
+      await db
+        .delete(webhooks)
+        .where(and(eq(webhooks.id, input.webhookId), eq(webhooks.workspaceId, input.workspaceId)));
+
+      return { success: true };
     }),
 });
 

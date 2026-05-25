@@ -17,6 +17,8 @@
     "@repo/logger": "workspace:*",
     "google-auth-library": "^10.5.0",
     "resend": "^4.8.0",
-    "zod": "^4.3.5"
+    "zod": "^4.3.5",
+    "@repo/types": "workspace:*",
+    "@paralleldrive/cuid2": "^2.2.2"
   }
 }

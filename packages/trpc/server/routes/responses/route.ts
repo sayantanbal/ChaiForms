@@ -365,6 +365,18 @@ export const responsesRouter = router({
         submittedAt: new Date().toISOString(),
       });
 
+      // Fire webhook asynchronously
+      if (form.workspaceId) {
+        import("@repo/services/webhook")
+          .then(({ WebhookService }) => {
+            WebhookService.trigger(form.workspaceId as string, "form.response.submitted", {
+              formId: form.id,
+              responseId: response.id,
+            });
+          })
+          .catch((err) => console.error("Failed to load WebhookService", err));
+      }
+
       return { success: true, responseId: response.id };
     }),
 

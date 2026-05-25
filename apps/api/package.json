@@ -33,6 +33,7 @@
     "drizzle-orm": "^0.45.1",
     "@repo/logger": "workspace:*",
     "@repo/schemas": "workspace:*",
+    "@repo/types": "workspace:*",
     "@repo/trpc": "workspace:*",
     "@scalar/express-api-reference": "^0.8.30",
     "@trpc/server": "^11.8.1",
