@@ -32,7 +32,16 @@
       "dependsOn": ["^check-types"]
     },
     "test": {
-      "dependsOn": ["^test"]
+      "dependsOn": ["^test"],
+      "env": [
+        "DATABASE_URL",
+        "JWT_SECRET",
+        "CSRF_SECRET",
+        "BASE_URL",
+        "WEB_ORIGIN",
+        "NEXT_PUBLIC_API_URL",
+        "NEXT_PUBLIC_WEB_BASE_URL"
+      ]
     },
     "dev": {
       "cache": false,

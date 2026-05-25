@@ -15,6 +15,8 @@ export default defineConfig({
     },
     env: {
       NODE_ENV: "test",
+      DATABASE_URL:
+        process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/chaiforms_test",
       CSRF_SECRET: "c".repeat(32),
       JWT_SECRET: "j".repeat(32),
       BASE_URL: "http://localhost:3000",
