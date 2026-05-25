@@ -27,6 +27,15 @@ export const formSettingsSchema = z.object({
   theme: z
     .enum(["default", "anime", "movie", "game", "startup", "tech_company", "os", "event"])
     .optional(),
+  customTheme: z
+    .object({
+      primaryColor: z.string().optional(),
+      backgroundColor: z.string().optional(),
+      textColor: z.string().optional(),
+      fontFamily: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
   thankyouMessage: z.string().max(1000).optional(),
   expiryDate: z.iso.datetime().nullable().optional(),
   responseLimit: z.number().int().min(1).nullable().optional(),

@@ -56,6 +56,15 @@ export const formOutputSchema = z.object({
   visibility: z.enum(["public", "unlisted"]),
   theme: z.enum(["default", "anime", "movie", "game", "startup", "tech_company", "os", "event"]),
   fields: z.array(z.any()),
+  customTheme: z
+    .object({
+      primaryColor: z.string().optional(),
+      backgroundColor: z.string().optional(),
+      textColor: z.string().optional(),
+      fontFamily: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
   thankyouMessage: z.string().nullable(),
   expiryDate: z.string().datetime().nullable(),
   responseLimit: z.number().int().nullable(),
@@ -102,6 +111,7 @@ function mapForm(form: typeof formsTable.$inferSelect) {
     status: form.status,
     visibility: form.visibility,
     theme: form.theme,
+    customTheme: form.customTheme,
     fields: (form.fields as FieldSchemaUnion[]) ?? [],
     thankyouMessage: form.thankyouMessage,
     expiryDate: form.expiryDate ? form.expiryDate.toISOString() : null,

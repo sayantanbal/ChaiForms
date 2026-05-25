@@ -31,6 +31,7 @@ export function FormBuilderClient({ initialForm }: { initialForm: any }) {
   const [settings, setSettings] = useState<Partial<FormSettingsSchema>>({
     title: initialForm.title,
     theme: initialForm.theme,
+    customTheme: initialForm.customTheme,
     visibility: initialForm.visibility,
     slug: initialForm.slug,
     scope: initialForm.scope ?? "global",
@@ -321,6 +322,8 @@ export function FormBuilderClient({ initialForm }: { initialForm: any }) {
                   <ThemePicker
                     currentTheme={settings.theme || "default"}
                     onSelectTheme={(theme) => handleUpdateSettings({ theme })}
+                    customTheme={settings.customTheme || {}}
+                    onCustomThemeChange={(customTheme) => handleUpdateSettings({ customTheme })}
                   />
                 </div>
               )}

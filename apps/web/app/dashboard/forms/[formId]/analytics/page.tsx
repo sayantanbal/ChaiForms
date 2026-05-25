@@ -12,12 +12,16 @@ export default function AnalyticsPage() {
   const { delta, reconnecting } = useAnalyticsWs(formId);
 
   const { data: form } = trpc.forms.getById.useQuery({ formId });
-  const { data: summary, isLoading: summaryLoading } = trpc.analytics.getSummary.useQuery({ formId });
-  const { data: breakdown, isLoading: breakdownLoading } = trpc.analytics.getFieldBreakdown.useQuery({ formId });
-  const { data: overTime, isLoading: overTimeLoading } = trpc.analytics.getResponsesOverTime.useQuery({
+  const { data: summary, isLoading: summaryLoading } = trpc.analytics.getSummary.useQuery({
     formId,
-    granularity: "day",
   });
+  const { data: breakdown, isLoading: breakdownLoading } =
+    trpc.analytics.getFieldBreakdown.useQuery({ formId });
+  const { data: overTime, isLoading: overTimeLoading } =
+    trpc.analytics.getResponsesOverTime.useQuery({
+      formId,
+      granularity: "day",
+    });
 
   useEffect(() => {
     if (!delta) return;
@@ -31,21 +35,36 @@ export default function AnalyticsPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Link href="/dashboard/forms" className="text-gray-500 hover:text-white transition-colors text-sm">
+      <div className="flex items-center gap-4 mb-6 print:hidden">
+        <Link
+          href="/dashboard/forms"
+          className="text-gray-500 hover:text-white transition-colors text-sm"
+        >
           ← Forms
         </Link>
         <span className="text-gray-600">/</span>
         <h1 className="text-xl font-bold">{form?.title ?? "..."} — Analytics</h1>
-        {reconnecting && (
-          <span className="text-xs text-amber-400 ml-auto">Reconnecting…</span>
-        )}
+        {reconnecting && <span className="text-xs text-amber-400 ml-auto">Reconnecting…</span>}
+        <button
+          onClick={() => window.print()}
+          className="ml-auto bg-gray-800 hover:bg-gray-700 text-sm font-semibold px-4 py-2 rounded-lg transition-colors border border-white/10"
+        >
+          Export PDF
+        </button>
+      </div>
+
+      {/* Print-only title */}
+      <div className="hidden print:block mb-8">
+        <h1 className="text-3xl font-bold">{form?.title ?? "Form"} — Analytics Report</h1>
+        <p className="text-gray-500 text-sm mt-2">Generated on {new Date().toLocaleDateString()}</p>
       </div>
 
       {/* Summary cards */}
       {summaryLoading ? (
         <div className="grid grid-cols-3 gap-4 mb-6">
-          {[...Array(3)].map((_, i) => <div key={i} className="h-24 bg-gray-800/50 rounded-xl animate-pulse" />)}
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-24 bg-gray-800/50 rounded-xl animate-pulse" />
+          ))}
         </div>
       ) : summary ? (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -88,7 +107,10 @@ export default function AnalyticsPage() {
                     {d.count}
                   </div>
                 </div>
-                <div className="text-xs text-gray-600 rotate-45 origin-top-left mt-1 whitespace-nowrap" style={{ fontSize: "9px" }}>
+                <div
+                  className="text-xs text-gray-600 rotate-45 origin-top-left mt-1 whitespace-nowrap"
+                  style={{ fontSize: "9px" }}
+                >
                   {d.date.slice(5, 10)}
                 </div>
               </div>
@@ -102,7 +124,9 @@ export default function AnalyticsPage() {
         <h2 className="font-semibold mb-4">Field Breakdown</h2>
         {breakdownLoading ? (
           <div className="space-y-3">
-            {[...Array(4)].map((_, i) => <div key={i} className="h-16 bg-gray-700/30 rounded animate-pulse" />)}
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-16 bg-gray-700/30 rounded animate-pulse" />
+            ))}
           </div>
         ) : (breakdown ?? []).length === 0 ? (
           <div className="text-gray-500 text-sm text-center py-8">No responses yet</div>
@@ -136,7 +160,9 @@ export default function AnalyticsPage() {
                         </div>
                       ))}
                       {entries.length > 8 && (
-                        <div className="text-xs text-gray-500 text-center">+{entries.length - 8} more values</div>
+                        <div className="text-xs text-gray-500 text-center">
+                          +{entries.length - 8} more values
+                        </div>
                       )}
                     </div>
                   )}

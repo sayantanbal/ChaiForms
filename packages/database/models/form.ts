@@ -15,16 +15,9 @@ import { usersTable } from "./user";
 import { workspacesTable } from "./workspace";
 import type { FieldSchemaUnion } from "@repo/schemas";
 
-export const formStatusEnum = pgEnum("form_status", [
-  "draft",
-  "published",
-  "archived",
-]);
+export const formStatusEnum = pgEnum("form_status", ["draft", "published", "archived"]);
 
-export const formVisibilityEnum = pgEnum("form_visibility", [
-  "public",
-  "unlisted",
-]);
+export const formVisibilityEnum = pgEnum("form_visibility", ["public", "unlisted"]);
 
 export const formScopeEnum = pgEnum("form_scope", ["global", "workspace"]);
 
@@ -76,13 +69,17 @@ export const formsTable = pgTable(
     visibility: formVisibilityEnum("visibility").default("unlisted").notNull(),
     theme: formThemeEnum("theme").default("default").notNull(),
     fields: jsonb("fields").$type<FieldSchemaUnion[]>().default([]).notNull(),
+    customTheme: jsonb("custom_theme").$type<{
+      primaryColor?: string;
+      backgroundColor?: string;
+      textColor?: string;
+      fontFamily?: string;
+    }>(),
     thankyouMessage: text("thankyou_message"),
     expiryDate: timestamp("expiry_date"),
     responseLimit: integer("response_limit"),
     accessPasswordHash: text("access_password_hash"),
-    sendRespondentConfirmation: boolean("send_respondent_confirmation")
-      .default(false)
-      .notNull(),
+    sendRespondentConfirmation: boolean("send_respondent_confirmation").default(false).notNull(),
 
     /** Soft-delete: set on "delete", cleared on "recover". Purged after 7 days by cron. */
     deletedAt: timestamp("deleted_at"),

@@ -61,6 +61,7 @@ export class FormsService {
     if (settings.slug !== undefined) updateData.slug = settings.slug;
     if (settings.visibility !== undefined) updateData.visibility = settings.visibility;
     if (settings.theme !== undefined) updateData.theme = settings.theme;
+    if (settings.customTheme !== undefined) updateData.customTheme = settings.customTheme;
     if (settings.thankyouMessage !== undefined)
       updateData.thankyouMessage = settings.thankyouMessage;
     if (settings.expiryDate !== undefined)

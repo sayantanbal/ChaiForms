@@ -25,9 +25,8 @@ export default function PublicFormPage() {
 
   useEffect(() => {
     if (form?.hasPassword) {
-      const stored = typeof window !== "undefined"
-        ? sessionStorage.getItem(`unlock_${form.id}`)
-        : null;
+      const stored =
+        typeof window !== "undefined" ? sessionStorage.getItem(`unlock_${form.id}`) : null;
       if (stored) {
         setUnlockToken(stored);
       } else {
@@ -48,7 +47,7 @@ export default function PublicFormPage() {
 
   if (isLoading) {
     return (
-      <ThemeProvider theme="default">
+      <ThemeProvider theme="default" customTheme={(form as any)?.customTheme}>
         <div className="flex min-h-screen items-center justify-center">
           <div className="flex flex-col items-center gap-4 text-[var(--form-muted)]">
             <div className="w-8 h-8 rounded-full border-2 border-[var(--form-primary)] border-t-transparent animate-spin" />
@@ -66,7 +65,7 @@ export default function PublicFormPage() {
   // Form is draft or archived
   if (form.status === "draft" || form.status === "archived") {
     return (
-      <ThemeProvider theme={theme}>
+      <ThemeProvider theme={theme} customTheme={(form as any)?.customTheme}>
         <div className="flex min-h-screen items-center justify-center">
           <FormClosed status={form.status as "draft" | "archived"} />
         </div>
@@ -79,7 +78,7 @@ export default function PublicFormPage() {
   // Password gate
   if (showPasswordGate) {
     return (
-      <ThemeProvider theme={theme}>
+      <ThemeProvider theme={theme} customTheme={(form as any)?.customTheme}>
         <div className="flex min-h-screen items-center justify-center p-4">
           <div className="mx-auto w-full max-w-sm rounded-3xl border border-[var(--form-border)] bg-[var(--form-surface)] p-8 sm:p-10 text-center shadow-xl relative z-10">
             <div className="mb-4 text-5xl">🔒</div>
@@ -114,7 +113,7 @@ export default function PublicFormPage() {
   }
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={theme} customTheme={(form as any)?.customTheme}>
       <div className="relative z-10 w-full">
         {/* Branding watermark */}
         <div className="fixed right-4 top-4 z-50">

@@ -57,20 +57,39 @@ export function getThemeComponents(theme: ThemeKey): ThemeComponents {
 
 export function ThemeProvider({
   theme,
+  customTheme,
   children,
 }: {
   theme?: string | null;
+  customTheme?: any | null;
   children: React.ReactNode;
 }) {
   const resolvedTheme = resolveThemeKey(theme);
   const components = useMemo(() => getThemeComponents(resolvedTheme), [resolvedTheme]);
 
+  const customStyles = useMemo(() => {
+    if (!customTheme) return {};
+    const styles: Record<string, string> = {};
+    if (customTheme.primaryColor) styles["--form-primary"] = customTheme.primaryColor;
+    if (customTheme.backgroundColor) {
+      styles["--form-bg"] = customTheme.backgroundColor;
+      styles["--form-surface"] = customTheme.backgroundColor;
+    }
+    if (customTheme.textColor) {
+      styles["--form-text"] = customTheme.textColor;
+      styles["--form-fg"] = customTheme.textColor;
+    }
+    return styles;
+  }, [customTheme]);
+
   return (
     <ThemeContext.Provider value={{ name: resolvedTheme, components }}>
-      <components.Wrapper>
-        <components.Background />
-        {children}
-      </components.Wrapper>
+      <div style={customStyles as any} className="contents">
+        <components.Wrapper>
+          <components.Background />
+          {children}
+        </components.Wrapper>
+      </div>
     </ThemeContext.Provider>
   );
 }
