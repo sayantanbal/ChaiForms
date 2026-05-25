@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Integration test: OAuth callback flow (Live DB)
  */
@@ -39,11 +40,7 @@ import { authRouter } from "@repo/trpc/server/routes/auth/route";
 import { db, clearDatabase, eq } from "@repo/database";
 import { usersTable } from "@repo/database/schema";
 import { signAccessJwt } from "@repo/trpc/server/utils/jwt";
-import {
-  CSRF_COOKIE_NAME,
-  CSRF_HEADER_NAME,
-  createCsrfToken,
-} from "@repo/trpc/server/utils/csrf";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, createCsrfToken } from "@repo/trpc/server/utils/csrf";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -102,8 +99,11 @@ describe("auth.callback integration", () => {
 
     expect(result.user.email).toBe("alice@example.com");
     expect(result.user.role).toBe("creator");
-    
-    const dbUser = await db.select().from(usersTable).where(eq(usersTable.email, "alice@example.com"));
+
+    const dbUser = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, "alice@example.com"));
     expect(dbUser).toHaveLength(1);
     expect(dbUser[0]?.fullName).toBe("Alice Example");
 
@@ -111,7 +111,7 @@ describe("auth.callback integration", () => {
     expect(ctx.res.cookie).toHaveBeenCalledWith(
       "chaiforms-access",
       "mock.access.jwt",
-      expect.objectContaining({ httpOnly: true })
+      expect.objectContaining({ httpOnly: true }),
     );
   });
 
@@ -133,8 +133,11 @@ describe("auth.callback integration", () => {
     const result = await caller.callback({ code: "google-oauth-code" });
 
     expect(result.user.id).toBe(DEMO_USER_ID);
-    
-    const dbUsers = await db.select().from(usersTable).where(eq(usersTable.email, "alice@example.com"));
+
+    const dbUsers = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, "alice@example.com"));
     expect(dbUsers).toHaveLength(1); // Should still only have 1
   });
 
@@ -157,7 +160,7 @@ describe("auth.callback integration", () => {
     expect(ctx.res.cookie).toHaveBeenCalledWith(
       "chaiforms-access",
       expect.any(String),
-      expect.objectContaining({ httpOnly: true })
+      expect.objectContaining({ httpOnly: true }),
     );
   });
 
@@ -167,9 +170,9 @@ describe("auth.callback integration", () => {
     const ctx = buildCtx();
     const caller = authRouter.createCaller(ctx as any);
 
-    await expect(
-      caller.demoLogin({ email: "demo@chaiforms.dev" })
-    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(caller.demoLogin({ email: "demo@chaiforms.dev" })).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
 
     process.env.ENABLE_DEMO_LOGIN = "true";
   });

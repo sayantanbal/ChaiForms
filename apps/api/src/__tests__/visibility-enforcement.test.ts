@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Integration test: Visibility enforcement (Live DB)
  */
@@ -116,46 +117,38 @@ beforeEach(async () => {
 // ---------------------------------------------------------------------------
 describe("explore.listPublicForms — visibility enforcement", () => {
   it("returns only published + public forms (excludes draft, archived, unlisted)", async () => {
-    await db
-      .insert(formsTable)
-      .values(
-        makeForm({
-          id: "11111111-1111-4111-a111-111111111111",
-          slug: "pub",
-          status: "published",
-          visibility: "public",
-        }),
-      );
-    await db
-      .insert(formsTable)
-      .values(
-        makeForm({
-          id: "22222222-2222-4222-a222-222222222222",
-          slug: "draft",
-          status: "draft",
-          visibility: "public",
-        }),
-      );
-    await db
-      .insert(formsTable)
-      .values(
-        makeForm({
-          id: "33333333-3333-4333-a333-333333333333",
-          slug: "archived",
-          status: "archived",
-          visibility: "public",
-        }),
-      );
-    await db
-      .insert(formsTable)
-      .values(
-        makeForm({
-          id: "44444444-4444-4444-a444-444444444444",
-          slug: "unlisted",
-          status: "published",
-          visibility: "unlisted",
-        }),
-      );
+    await db.insert(formsTable).values(
+      makeForm({
+        id: "11111111-1111-4111-a111-111111111111",
+        slug: "pub",
+        status: "published",
+        visibility: "public",
+      }),
+    );
+    await db.insert(formsTable).values(
+      makeForm({
+        id: "22222222-2222-4222-a222-222222222222",
+        slug: "draft",
+        status: "draft",
+        visibility: "public",
+      }),
+    );
+    await db.insert(formsTable).values(
+      makeForm({
+        id: "33333333-3333-4333-a333-333333333333",
+        slug: "archived",
+        status: "archived",
+        visibility: "public",
+      }),
+    );
+    await db.insert(formsTable).values(
+      makeForm({
+        id: "44444444-4444-4444-a444-444444444444",
+        slug: "unlisted",
+        status: "published",
+        visibility: "unlisted",
+      }),
+    );
 
     const caller = exploreRouter.createCaller(buildPublicCtx() as any);
     const result = await caller.listPublicForms({ page: 1, pageSize: 10 });
@@ -166,16 +159,14 @@ describe("explore.listPublicForms — visibility enforcement", () => {
   });
 
   it("returns empty list when all forms are draft/archived/unlisted", async () => {
-    await db
-      .insert(formsTable)
-      .values(
-        makeForm({
-          id: "22222222-2222-4222-a222-222222222222",
-          slug: "draft",
-          status: "draft",
-          visibility: "public",
-        }),
-      );
+    await db.insert(formsTable).values(
+      makeForm({
+        id: "22222222-2222-4222-a222-222222222222",
+        slug: "draft",
+        status: "draft",
+        visibility: "public",
+      }),
+    );
 
     const caller = exploreRouter.createCaller(buildPublicCtx() as any);
     const result = await caller.listPublicForms({ page: 1, pageSize: 10 });
@@ -229,16 +220,14 @@ describe("responses.submit — status guard", () => {
 
 describe("forms.getBySlug — public access", () => {
   it("returns a published form by slug (even if unlisted, getBySlug is for direct links)", async () => {
-    await db
-      .insert(formsTable)
-      .values(
-        makeForm({
-          id: "e8c95b2b-9848-43d4-8a25-0e4c5fa0a222",
-          slug: "my-form",
-          status: "published",
-          visibility: "public",
-        }),
-      );
+    await db.insert(formsTable).values(
+      makeForm({
+        id: "e8c95b2b-9848-43d4-8a25-0e4c5fa0a222",
+        slug: "my-form",
+        status: "published",
+        visibility: "public",
+      }),
+    );
 
     const caller = formsRouter.createCaller(buildPublicCtx() as any);
     const result = await caller.getBySlug({ slug: "my-form" });

@@ -1,6 +1,13 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
+  "globalEnv": [
+    "SKIP_ENV_VALIDATION",
+    "CI",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "GOOGLE_REDIRECT_URI"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

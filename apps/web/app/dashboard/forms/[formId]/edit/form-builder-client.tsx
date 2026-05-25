@@ -12,7 +12,7 @@ import { FormCanvas } from "@/components/form-builder/form-canvas";
 import { FieldConfigPanel } from "@/components/form-builder/field-config-panel";
 import { ThemePicker } from "@/components/form-builder/theme-picker";
 import { SettingsPanel } from "@/components/form-builder/settings-panel";
-import { Eye, Share2, Globe, Save, Loader2, GripVertical } from "lucide-react";
+import { Eye, Share2, Globe, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
@@ -273,7 +273,6 @@ export function FormBuilderClient({ initialForm }: { initialForm: any }) {
               selectedFieldId={selectedFieldId}
               onSelectField={setSelectedFieldId}
               onDeleteField={handleDeleteField}
-              onReorderFields={handleReorderFields}
               onAddField={() => handleAddField("short_text")}
               theme={settings.theme}
             />

@@ -186,7 +186,8 @@ export default function DeveloperSettingsPage() {
           </p>
           <pre className="text-xs bg-gray-950 p-3 rounded-lg overflow-x-auto text-orange-300">
             <code>
-              curl -H "Authorization: Bearer cf_your_api_key_here" https://api.chaiforms.com/v1/...
+              curl -H &quot;Authorization: Bearer cf_your_api_key_here&quot;
+              https://api.chaiforms.com/v1/...
             </code>
           </pre>
         </div>

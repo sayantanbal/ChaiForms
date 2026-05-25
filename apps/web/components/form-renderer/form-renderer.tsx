@@ -31,12 +31,11 @@ export function FormRenderer({
   const [startedAt] = useState(() => new Date().toISOString());
 
   // Derive pages from the array or treat all fields as one page
-  const pageLayout = pages && pages.length > 0 
-    ? pages 
-    : [{ id: "default", fieldIds: fields.map(f => f.id) }];
+  const pageLayout =
+    pages && pages.length > 0 ? pages : [{ id: "default", fieldIds: fields.map((f) => f.id) }];
 
   const currentFieldIds = pageLayout[pageIndex]?.fieldIds || [];
-  const currentFields = fields.filter(f => currentFieldIds.includes(f.id));
+  const currentFields = fields.filter((f) => currentFieldIds.includes(f.id));
 
   const submitMutation = trpc.responses.submit.useMutation({
     onSuccess: () => {
@@ -46,16 +45,16 @@ export function FormRenderer({
       // Map TRPC field errors if they exist
       if (error.data?.code === "BAD_REQUEST" && error.message.includes("validation")) {
         // Simple fallback parsing for now since TRPC errors can be complex
-        const newErrors: Record<string, string> = {};
+        // Simple fallback parsing for now since TRPC errors can be complex
         // If error message format is known, parse it here. Otherwise just show top level.
         // E.g. Zod error might come through. We'll set a generic error on required missing.
-        
+
         // For now, let's just do client-side validation as the primary guard
-        setErrors({ "submit": error.message });
+        setErrors({ submit: error.message });
       } else {
-        setErrors({ "submit": error.message });
+        setErrors({ submit: error.message });
       }
-    }
+    },
   });
 
   const validateCurrentPage = () => {
@@ -65,8 +64,9 @@ export function FormRenderer({
 
     visibleFields.forEach((field) => {
       const val = answers[field.id];
-      const isEmpty = val === undefined || val === null || val === "" || (Array.isArray(val) && val.length === 0);
-      
+      const isEmpty =
+        val === undefined || val === null || val === "" || (Array.isArray(val) && val.length === 0);
+
       if (field.required && isEmpty) {
         newErrors[field.id] = "This field is required";
         isValid = false;
@@ -95,7 +95,7 @@ export function FormRenderer({
                 newErrors[field.id] = "Invalid format";
                 isValid = false;
               }
-            } catch (e) {
+            } catch {
               // Ignore bad regex
             }
           }
@@ -130,8 +130,10 @@ export function FormRenderer({
         // Best practice: Only submit visible fields
         const allVisibleFields = getVisibleFields(fields, answers);
         const finalAnswers = allVisibleFields
-          .filter(f => answers[f.id] !== undefined && answers[f.id] !== null && answers[f.id] !== "")
-          .map(f => {
+          .filter(
+            (f) => answers[f.id] !== undefined && answers[f.id] !== null && answers[f.id] !== "",
+          )
+          .map((f) => {
             const raw = answers[f.id];
             // Serialize arrays (multi_select) as JSON strings for backend text column
             const value = Array.isArray(raw) ? JSON.stringify(raw) : String(raw);
@@ -140,7 +142,7 @@ export function FormRenderer({
 
         if (previewMode) {
           // In preview mode, don't actually submit
-          setErrors({ "submit": "Submissions are disabled in preview mode." });
+          setErrors({ submit: "Submissions are disabled in preview mode." });
           return;
         }
 
@@ -148,7 +150,7 @@ export function FormRenderer({
           formId,
           startedAt,
           unlockToken,
-          answers: finalAnswers
+          answers: finalAnswers,
         });
       }
     }
@@ -177,10 +179,10 @@ export function FormRenderer({
         answers={answers}
         errors={errors}
         onChange={(fieldId, value) => {
-          setAnswers(prev => ({ ...prev, [fieldId]: value }));
+          setAnswers((prev) => ({ ...prev, [fieldId]: value }));
           // Clear error when user types
           if (errors[fieldId]) {
-            setErrors(prev => {
+            setErrors((prev) => {
               const next = { ...prev };
               delete next[fieldId];
               return next;

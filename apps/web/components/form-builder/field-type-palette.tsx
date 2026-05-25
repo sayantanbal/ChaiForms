@@ -3,18 +3,17 @@
 import React from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { FieldType } from "@repo/schemas";
-import { 
-  Type, 
-  AlignLeft, 
-  Mail, 
-  Hash, 
-  List, 
-  ListChecks, 
-  CheckSquare, 
-  Star, 
-  Calendar 
+import {
+  Type,
+  AlignLeft,
+  Mail,
+  Hash,
+  List,
+  ListChecks,
+  CheckSquare,
+  Star,
+  Calendar,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const FIELD_TYPES: { type: FieldType; label: string; icon: React.ReactNode }[] = [
   { type: "short_text", label: "Short Text", icon: <Type className="w-4 h-4" /> },
@@ -28,7 +27,17 @@ const FIELD_TYPES: { type: FieldType; label: string; icon: React.ReactNode }[] =
   { type: "date", label: "Date", icon: <Calendar className="w-4 h-4" /> },
 ];
 
-function DraggableFieldType({ type, label, icon, onAdd }: { type: FieldType; label: string; icon: React.ReactNode; onAdd: (type: FieldType) => void }) {
+function DraggableFieldType({
+  type,
+  label,
+  icon,
+  onAdd,
+}: {
+  type: FieldType;
+  label: string;
+  icon: React.ReactNode;
+  onAdd: (type: FieldType) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `palette-${type}`,
     data: {
@@ -37,9 +46,11 @@ function DraggableFieldType({ type, label, icon, onAdd }: { type: FieldType; lab
     },
   });
 
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-  } : undefined;
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      }
+    : undefined;
 
   return (
     <div
@@ -59,7 +70,9 @@ function DraggableFieldType({ type, label, icon, onAdd }: { type: FieldType; lab
 export function FieldTypePalette({ onAddField }: { onAddField: (type: FieldType) => void }) {
   return (
     <div className="p-4 h-full overflow-y-auto border-r border-border bg-background">
-      <h3 className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-wider">Field Types</h3>
+      <h3 className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-wider">
+        Field Types
+      </h3>
       <div className="flex flex-col gap-1">
         {FIELD_TYPES.map((field) => (
           <DraggableFieldType

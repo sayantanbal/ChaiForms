@@ -13,16 +13,13 @@ export default function ResponsesPage() {
   const PAGE_SIZE = 20;
 
   const { data: form } = trpc.forms.getById.useQuery({ formId });
-  const { data, isLoading, refetch } = trpc.responses.list.useQuery({
+  const { data, isLoading } = trpc.responses.list.useQuery({
     formId,
     page,
     pageSize: PAGE_SIZE,
   });
 
-  const exportCsvQuery = trpc.responses.exportCsv.useQuery(
-    { formId },
-    { enabled: false }
-  );
+  const exportCsvQuery = trpc.responses.exportCsv.useQuery({ formId }, { enabled: false });
 
   const handleExport = async () => {
     const result = await exportCsvQuery.refetch();
@@ -48,7 +45,10 @@ export default function ResponsesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/forms" className="text-gray-500 hover:text-white transition-colors text-sm">
+          <Link
+            href="/dashboard/forms"
+            className="text-gray-500 hover:text-white transition-colors text-sm"
+          >
             ← Forms
           </Link>
           <span className="text-gray-600">/</span>
@@ -64,17 +64,23 @@ export default function ResponsesPage() {
         </button>
       </div>
 
-      <div className="text-sm text-gray-400 mb-4">{total} response{total !== 1 ? "s" : ""}</div>
+      <div className="text-sm text-gray-400 mb-4">
+        {total} response{total !== 1 ? "s" : ""}
+      </div>
 
       {isLoading ? (
         <div className="space-y-3">
-          {[...Array(5)].map((_, i) => <div key={i} className="h-24 bg-gray-800/50 rounded-xl animate-pulse" />)}
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-24 bg-gray-800/50 rounded-xl animate-pulse" />
+          ))}
         </div>
       ) : responses.length === 0 ? (
         <div className="bg-gray-800/30 border border-dashed border-white/20 rounded-2xl p-16 text-center">
           <div className="text-5xl mb-4">📭</div>
           <h2 className="text-xl font-bold mb-2">No responses yet</h2>
-          <p className="text-gray-400">Publish and share your form to start collecting responses.</p>
+          <p className="text-gray-400">
+            Publish and share your form to start collecting responses.
+          </p>
           {form?.status === "draft" && (
             <Link
               href={`/dashboard/forms/${formId}/edit`}
@@ -89,10 +95,17 @@ export default function ResponsesPage() {
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-white/10">
-                <th className="text-left px-3 py-3 text-gray-400 font-medium whitespace-nowrap">Submitted</th>
-                <th className="text-left px-3 py-3 text-gray-400 font-medium whitespace-nowrap">Email</th>
+                <th className="text-left px-3 py-3 text-gray-400 font-medium whitespace-nowrap">
+                  Submitted
+                </th>
+                <th className="text-left px-3 py-3 text-gray-400 font-medium whitespace-nowrap">
+                  Email
+                </th>
                 {fields.slice(0, 4).map((f) => (
-                  <th key={f.id} className="text-left px-3 py-3 text-gray-400 font-medium whitespace-nowrap max-w-32 truncate">
+                  <th
+                    key={f.id}
+                    className="text-left px-3 py-3 text-gray-400 font-medium whitespace-nowrap max-w-32 truncate"
+                  >
                     {f.label}
                   </th>
                 ))}
@@ -107,10 +120,18 @@ export default function ResponsesPage() {
               {responses.map((r) => {
                 const ansMap = new Map(r.answers.map((a) => [a.fieldId, a.value]));
                 return (
-                  <tr key={r.id} className="border-b border-white/5 hover:bg-white/2 transition-colors">
+                  <tr
+                    key={r.id}
+                    className="border-b border-white/5 hover:bg-white/2 transition-colors"
+                  >
                     <td className="px-3 py-3 text-gray-400 whitespace-nowrap">
                       {new Date(r.submittedAt).toLocaleDateString()}{" "}
-                      <span className="text-gray-600">{new Date(r.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                      <span className="text-gray-600">
+                        {new Date(r.submittedAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
                     </td>
                     <td className="px-3 py-3 text-gray-300 whitespace-nowrap">
                       {r.respondentEmail ?? <span className="text-gray-600">—</span>}
@@ -143,7 +164,9 @@ export default function ResponsesPage() {
           >
             ← Prev
           </button>
-          <span className="text-sm text-gray-400">Page {page} of {totalPages}</span>
+          <span className="text-sm text-gray-400">
+            Page {page} of {totalPages}
+          </span>
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}

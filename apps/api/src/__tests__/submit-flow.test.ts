@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Integration test: Full response submission flow (Live DB)
  */
@@ -43,11 +44,7 @@ import { responsesRouter } from "@repo/trpc/server/routes/responses/route";
 import { db, clearDatabase, eq } from "@repo/database";
 import { usersTable, formsTable, responsesTable, answersTable } from "@repo/database/schema";
 import { notificationService } from "@repo/services/notification";
-import {
-  CSRF_COOKIE_NAME,
-  CSRF_HEADER_NAME,
-  createCsrfToken,
-} from "@repo/trpc/server/utils/csrf";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, createCsrfToken } from "@repo/trpc/server/utils/csrf";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -133,10 +130,16 @@ describe("responses.submit — full flow", () => {
     expect(result.responseId).toBeDefined();
 
     // Verify DB insertion
-    const dbResponses = await db.select().from(responsesTable).where(eq(responsesTable.id, result.responseId));
+    const dbResponses = await db
+      .select()
+      .from(responsesTable)
+      .where(eq(responsesTable.id, result.responseId));
     expect(dbResponses).toHaveLength(1);
 
-    const dbAnswers = await db.select().from(answersTable).where(eq(answersTable.responseId, result.responseId));
+    const dbAnswers = await db
+      .select()
+      .from(answersTable)
+      .where(eq(answersTable.responseId, result.responseId));
     expect(dbAnswers).toHaveLength(2);
 
     expect(notificationService.sendSubmissionEmails).toHaveBeenCalledTimes(1);
@@ -145,7 +148,7 @@ describe("responses.submit — full flow", () => {
         creatorEmail: CREATOR_EMAIL,
         formTitle: "Widget Feedback",
         responseId: result.responseId,
-      })
+      }),
     );
   });
 
@@ -159,7 +162,7 @@ describe("responses.submit — full flow", () => {
         formId: FORM_ID,
         startedAt: new Date().toISOString(),
         answers: [], // FIELD_NAME is required — should fail
-      })
+      }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     const dbResponses = await db.select().from(responsesTable);
@@ -177,7 +180,7 @@ describe("responses.submit — full flow", () => {
         formId: FORM_ID,
         startedAt: new Date().toISOString(),
         answers: [{ fieldId: FIELD_NAME, value: "Rohan" }],
-      })
+      }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
@@ -191,7 +194,7 @@ describe("responses.submit — full flow", () => {
         formId: FORM_ID,
         startedAt: new Date().toISOString(),
         answers: [{ fieldId: FIELD_NAME, value: "Rohan" }],
-      })
+      }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
@@ -203,7 +206,7 @@ describe("responses.submit — full flow", () => {
         formId: "5f8a0a99-9999-4444-8888-000000000000",
         startedAt: new Date().toISOString(),
         answers: [{ fieldId: FIELD_NAME, value: "Rohan" }],
-      })
+      }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });

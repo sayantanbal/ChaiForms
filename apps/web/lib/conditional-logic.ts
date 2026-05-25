@@ -27,17 +27,6 @@ type RuleGroup = {
   rules: (SingleRule | RuleGroup)[];
 };
 
-function normalizeValue(val: any): string | number | boolean | null {
-  if (val === undefined || val === null) return null;
-  if (typeof val === "boolean") return val;
-  if (typeof val === "number") return val;
-  if (typeof val === "string") {
-    // Attempt to parse string to number for numeric operators later, but keep as string here
-    return val;
-  }
-  return String(val);
-}
-
 function evaluateSingleRule(rule: SingleRule, answers: Record<string, any>): boolean {
   const sourceValueRaw = answers[rule.field];
 
@@ -142,7 +131,7 @@ export function evaluateRuleGroup(group: RuleGroup, answers: Record<string, any>
 
 export function evaluateConditionalRules(
   field: FieldSchemaUnion,
-  answers: Record<string, any>
+  answers: Record<string, any>,
 ): boolean {
   const rules = field.conditionalRules;
   if (!rules) return true;
@@ -153,8 +142,8 @@ export function evaluateConditionalRules(
     return rules.every((rule: any) =>
       evaluateSingleRule(
         { field: rule.sourceFieldId, operator: rule.operator, value: rule.value },
-        answers
-      )
+        answers,
+      ),
     );
   }
 
@@ -164,7 +153,7 @@ export function evaluateConditionalRules(
 
 export function getVisibleFields(
   fields: FieldSchemaUnion[],
-  answers: Record<string, any>
+  answers: Record<string, any>,
 ): FieldSchemaUnion[] {
   return fields.filter((field) => evaluateConditionalRules(field, answers));
 }
@@ -172,16 +161,21 @@ export function getVisibleFields(
 // -------------------------------------------------------------------------
 // Dynamic Option Evaluation
 // -------------------------------------------------------------------------
-export type OptionItem = { id: string; label: string; value: string; metadata?: Record<string, any> };
+export type OptionItem = {
+  id: string;
+  label: string;
+  value: string;
+  metadata?: Record<string, any>;
+};
 export type OptionInput = string | OptionItem;
 
 export function evaluateDynamicOptions(
   field: FieldSchemaUnion,
-  answers: Record<string, any>
+  answers: Record<string, any>,
 ): OptionInput[] {
   // @ts-expect-error field.options exists on select types
   const baseOptions: OptionInput[] = field.options || [];
-  
+
   if (!field.dynamicOptionRules || field.dynamicOptionRules.length === 0) {
     return baseOptions;
   }
