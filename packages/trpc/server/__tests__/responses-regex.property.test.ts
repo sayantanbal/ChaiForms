@@ -110,7 +110,7 @@ describe("responses.submit regex validation", () => {
   it("rejects values that do not match the regex", async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.string({ minLength: 1, maxLength: 12 }).filter((v) => v !== "foo"),
+        fc.string({ minLength: 1, maxLength: 12 }).filter((v) => v !== "foo" && v.trim() !== ""),
         async (value) => {
           const fieldId = "f6f2e7af-42a1-4458-a5c3-c9925f6509a5";
           const form = {

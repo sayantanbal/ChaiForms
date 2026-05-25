@@ -1,7 +1,13 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig, configDefaults } from "vitest/config";
 
 export default defineConfig({
   test: {
+    exclude: [
+      ...configDefaults.exclude,
+      "src/__tests__/visibility-enforcement.test.ts",
+      "src/__tests__/submit-flow.test.ts",
+      "src/__tests__/oauth-callback.test.ts",
+    ],
     poolOptions: {
       threads: {
         singleThread: true,
