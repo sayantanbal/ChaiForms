@@ -69,7 +69,7 @@ export class WebhookService {
         }),
       );
     } catch (err) {
-      logger.error("Error evaluating webhooks", err);
+      logger.error("Error evaluating webhooks", { error: err });
     }
   }
 }

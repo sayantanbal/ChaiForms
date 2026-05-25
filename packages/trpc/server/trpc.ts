@@ -63,7 +63,36 @@ const rateLimitMiddleware = tRPCContext.middleware(async ({ ctx, next, type, pat
   return next();
 });
 
-export const publicProcedure = tRPCContext.procedure.use(csrfMiddleware).use(rateLimitMiddleware);
+const loggerMiddleware = tRPCContext.middleware(async ({ ctx, path, type, next }) => {
+  const start = Date.now();
+  const req = ctx.req as any;
+  const correlationId = req.correlationId;
+  const userId = ctx.user?.id;
+
+  const result = await next();
+
+  const durationMs = Date.now() - start;
+  const meta = {
+    procedure: path,
+    type,
+    durationMs,
+    correlationId,
+    userId,
+  };
+
+  if (result.ok) {
+    logger.info(`tRPC call success`, meta);
+  } else {
+    logger.error(`tRPC call failed`, { ...meta, error: result.error.message });
+  }
+
+  return result;
+});
+
+export const publicProcedure = tRPCContext.procedure
+  .use(loggerMiddleware)
+  .use(csrfMiddleware)
+  .use(rateLimitMiddleware);
 
 export const protectedProcedure = publicProcedure.use(({ ctx, next }) => {
   if (!ctx.user) {

@@ -1,0 +1,43 @@
+{
+  "dashboard": {
+    "title": "ChaiForms Metrics",
+    "panels": [
+      {
+        "title": "Request Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(chaiforms_api_http_request_duration_seconds_count[5m])"
+          }
+        ]
+      },
+      {
+        "title": "Error Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(chaiforms_api_http_request_duration_seconds_count{code=~\"5..\"}[5m])"
+          }
+        ]
+      },
+      {
+        "title": "Form Submissions",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(chaiforms_api_form_submissions_total[5m])"
+          }
+        ]
+      },
+      {
+        "title": "P95 Latency",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(chaiforms_api_http_request_duration_seconds_bucket[5m]))"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,28 +1,58 @@
-import winston from "winston";
+import pino from "pino";
 import { env } from "./env";
 
-type LoggerLevel = "error" | "info" | "debug";
+export interface LogContext {
+  userId?: string;
+  formId?: string;
+  responseId?: string;
+  correlationId?: string;
+  [key: string]: unknown;
+}
 
-const level: LoggerLevel =
-  env.LOGGER_LEVEL ?? (env.NODE_ENV === "development" ? "debug" : "error");
+class Logger {
+  private logger: pino.Logger;
 
-const isDevelopment = env.NODE_ENV === "development";
+  constructor() {
+    this.logger = pino({
+      level: env.LOGGER_LEVEL ?? (env.NODE_ENV === "development" ? "debug" : "info"),
+      formatters: {
+        level: (label) => ({ level: label }),
+      },
+      timestamp: pino.stdTimeFunctions.isoTime,
+      ...(env.NODE_ENV === "production"
+        ? {} // Use JSON in production
+        : {
+            transport: {
+              target: "pino-pretty",
+              options: {
+                colorize: true,
+                translateTime: "SYS:standard",
+                ignore: "pid,hostname",
+              },
+            },
+          }),
+    });
+  }
 
-const format = isDevelopment
-  ? winston.format.combine(
-      winston.format.colorize(),
-      winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-      winston.format.printf(({ timestamp, level, message, ...meta }) => {
-        const metaString = Object.keys(meta).length
-          ? `\n${JSON.stringify(meta, null, 2)}`
-          : "";
-        return `${timestamp} [${level}]: ${message}${metaString}`;
-      }),
-    )
-  : winston.format.combine(winston.format.timestamp(), winston.format.json());
+  child(context: LogContext) {
+    return this.logger.child(context);
+  }
 
-export const logger = winston.createLogger({
-  level: level,
-  format: format,
-  transports: [new winston.transports.Console()],
-});
+  info(message: string, context?: LogContext) {
+    this.logger.info(context, message);
+  }
+
+  error(message: string, context?: LogContext & { error?: Error | unknown }) {
+    this.logger.error(context, message);
+  }
+
+  warn(message: string, context?: LogContext) {
+    this.logger.warn(context, message);
+  }
+
+  debug(message: string, context?: LogContext) {
+    this.logger.debug(context, message);
+  }
+}
+
+export const logger = new Logger();

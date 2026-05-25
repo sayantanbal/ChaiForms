@@ -5,6 +5,7 @@ import { setupWebSocketServer } from "./websocket";
 import { purgeExpiredForms } from "./cron/purge-deleted-forms";
 import { refreshAnalyticsMaterializedViews } from "./cron/refresh-analytics";
 import { createResponsePartitions } from "./cron/create-response-partitions";
+import { startHealthCheck } from "./monitoring/health-check";
 
 import { env } from "./env";
 
@@ -20,6 +21,7 @@ async function init() {
     const PORT: number = env.PORT ? +env.PORT : 8000;
     server.listen(PORT, "0.0.0.0", () => {
       logger.info(`http server is running on PORT ${PORT}`);
+      startHealthCheck();
     });
 
     void purgeExpiredForms().catch((err) => {
