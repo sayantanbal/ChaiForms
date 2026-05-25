@@ -2,9 +2,21 @@
 
 import { useParams } from "next/navigation";
 import { trpc } from "~/trpc/client";
-import { FormBuilderClient } from "./form-builder-client";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+const FormBuilderClient = dynamic(
+  () => import("./form-builder-client").then((mod) => mod.FormBuilderClient),
+  {
+    loading: () => (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    ),
+    ssr: false,
+  },
+);
 
 export default function FormBuilderPage() {
   const { formId } = useParams<{ formId: string }>();
@@ -31,4 +43,3 @@ export default function FormBuilderPage() {
 
   return <FormBuilderClient initialForm={form} />;
 }
-

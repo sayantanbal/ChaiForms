@@ -4,11 +4,13 @@ import { app as expressApplication } from "./server";
 import { setupWebSocketServer } from "./websocket";
 import { purgeExpiredForms } from "./cron/purge-deleted-forms";
 import { refreshAnalyticsMaterializedViews } from "./cron/refresh-analytics";
+import { createResponsePartitions } from "./cron/create-response-partitions";
 
 import { env } from "./env";
 
 const PURGE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const ANALYTICS_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const PARTITION_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 async function init() {
   try {
@@ -39,6 +41,16 @@ async function init() {
         logger.error("Scheduled analytics view refresh failed", { err });
       });
     }, ANALYTICS_REFRESH_INTERVAL_MS);
+
+    void createResponsePartitions().catch((err) => {
+      logger.error("Initial response partition creation failed", { err });
+    });
+
+    setInterval(() => {
+      void createResponsePartitions().catch((err) => {
+        logger.error("Scheduled response partition creation failed", { err });
+      });
+    }, PARTITION_CHECK_INTERVAL_MS);
   } catch (err) {
     logger.error(`Error creating http server`, { err });
     process.exit(1);

@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { trpc } from "~/trpc/client";
 import { toast } from "sonner";
+import { FormCardSkeleton } from "~/components/skeletons/form-card-skeleton";
 
 const THEME_BADGE: Record<string, string> = {
   anime: "bg-pink-500/20 text-pink-400",
@@ -25,12 +27,18 @@ export default function FormsListPage() {
   const { data, isLoading, refetch } = trpc.forms.list.useQuery({ page, pageSize: PAGE_SIZE });
 
   const publishMutation = trpc.forms.publish.useMutation({
-    onSuccess: () => { toast.success("Form published!"); void refetch(); },
+    onSuccess: () => {
+      toast.success("Form published!");
+      void refetch();
+    },
     onError: (e) => toast.error(e.message),
   });
 
   const unpublishMutation = trpc.forms.unpublish.useMutation({
-    onSuccess: () => { toast.success("Form unpublished"); void refetch(); },
+    onSuccess: () => {
+      toast.success("Form unpublished");
+      void refetch();
+    },
     onError: (e) => toast.error(e.message),
   });
 
@@ -43,18 +51,32 @@ export default function FormsListPage() {
   });
 
   const archiveMutation = trpc.forms.archive.useMutation({
-    onSuccess: () => { toast.success("Form archived"); void refetch(); },
+    onSuccess: () => {
+      toast.success("Form archived");
+      void refetch();
+    },
     onError: (e) => toast.error(e.message),
   });
 
   const softDeleteMutation = trpc.forms.softDelete.useMutation({
-    onSuccess: () => { toast.success("Form moved to trash"); void refetch(); },
+    onSuccess: () => {
+      toast.success("Form moved to trash");
+      void refetch();
+    },
     onError: (e) => toast.error(e.message),
   });
 
   const forms = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useWindowVirtualizer({
+    count: forms.length,
+    estimateSize: () => 120,
+    overscan: 5,
+  });
 
   const copyLink = (slug: string) => {
     void navigator.clipboard.writeText(`${window.location.origin}/f/${slug}`);
@@ -63,11 +85,11 @@ export default function FormsListPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
+      <div className="p-6 max-w-5xl mx-auto">
         <div className="h-8 w-48 bg-gray-800 rounded animate-pulse mb-6" />
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-20 bg-gray-800/50 rounded-xl animate-pulse" />
+            <FormCardSkeleton key={i} />
           ))}
         </div>
       </div>
@@ -80,7 +102,9 @@ export default function FormsListPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">My Forms</h1>
-          <p className="text-gray-400 text-sm mt-1">{total} form{total !== 1 ? "s" : ""} total</p>
+          <p className="text-gray-400 text-sm mt-1">
+            {total} form{total !== 1 ? "s" : ""} total
+          </p>
         </div>
         <Link
           id="create-form-btn"
@@ -105,131 +129,160 @@ export default function FormsListPage() {
           </Link>
         </div>
       ) : (
-        <div className="space-y-3">
-          {forms.map((form) => (
-            <div
-              key={form.id}
-              className="bg-gray-800/50 border border-white/10 rounded-xl p-4 hover:border-white/20 transition-all"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="font-semibold truncate">{form.title}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${THEME_BADGE[form.theme] ?? THEME_BADGE.default}`}>
-                      {form.theme.replace("_", " ")}
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      form.status === "published" ? "bg-green-500/20 text-green-400" :
-                      form.status === "archived" ? "bg-gray-500/20 text-gray-400" :
-                      "bg-yellow-500/20 text-yellow-400"
-                    }`}>
-                      {form.status}
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      form.visibility === "public" ? "bg-blue-500/20 text-blue-400" : "bg-gray-600/20 text-gray-500"
-                    }`}>
-                      {form.visibility}
-                    </span>
-                    {form.hasPassword && <span className="text-xs">🔒</span>}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    /{form.slug} · Updated {form.updatedAt ? new Date(form.updatedAt).toLocaleDateString() : "—"}
-                  </div>
-                </div>
+        <div
+          ref={listRef}
+          style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative", width: "100%" }}
+        >
+          {virtualizer.getVirtualItems().map((virtualRow) => {
+            const form = forms[virtualRow.index]!;
+            return (
+              <div
+                key={virtualRow.key}
+                ref={virtualizer.measureElement}
+                data-index={virtualRow.index}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  transform: `translateY(${virtualRow.start}px)`,
+                  paddingBottom: "12px",
+                }}
+              >
+                <div className="bg-gray-800/50 border border-white/10 rounded-xl p-4 hover:border-white/20 transition-all">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="font-semibold truncate">{form.title}</span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${THEME_BADGE[form.theme] ?? THEME_BADGE.default}`}
+                        >
+                          {form.theme.replace("_", " ")}
+                        </span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            form.status === "published"
+                              ? "bg-green-500/20 text-green-400"
+                              : form.status === "archived"
+                                ? "bg-gray-500/20 text-gray-400"
+                                : "bg-yellow-500/20 text-yellow-400"
+                          }`}
+                        >
+                          {form.status}
+                        </span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            form.visibility === "public"
+                              ? "bg-blue-500/20 text-blue-400"
+                              : "bg-gray-600/20 text-gray-500"
+                          }`}
+                        >
+                          {form.visibility}
+                        </span>
+                        {form.hasPassword && <span className="text-xs">🔒</span>}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        /{form.slug} · Updated{" "}
+                        {form.updatedAt ? new Date(form.updatedAt).toLocaleDateString() : "—"}
+                      </div>
+                    </div>
 
-                {/* Actions */}
-                <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
-                  <Link
-                    href={`/dashboard/forms/${form.id}/edit`}
-                    className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
-                  >
-                    Edit
-                  </Link>
-                  <Link
-                    href={`/dashboard/forms/${form.id}/preview`}
-                    className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
-                  >
-                    Preview
-                  </Link>
-                  <Link
-                    href={`/dashboard/forms/${form.id}/analytics`}
-                    className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
-                  >
-                    Analytics
-                  </Link>
-                  <Link
-                    href={`/dashboard/forms/${form.id}/responses`}
-                    className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
-                  >
-                    Responses
-                  </Link>
-                  {form.status === "draft" ? (
-                    <button
-                      onClick={() => publishMutation.mutate({ formId: form.id })}
-                      disabled={publishMutation.isPending}
-                      className="text-xs px-3 py-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-lg transition-all disabled:opacity-50"
-                    >
-                      Publish
-                    </button>
-                  ) : form.status === "published" ? (
-                    <button
-                      onClick={() => unpublishMutation.mutate({ formId: form.id })}
-                      disabled={unpublishMutation.isPending}
-                      className="text-xs px-3 py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 border border-yellow-500/30 rounded-lg transition-all disabled:opacity-50"
-                    >
-                      Unpublish
-                    </button>
-                  ) : null}
-                  <button
-                    onClick={() => copyLink(form.slug)}
-                    className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
-                  >
-                    Copy Link
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm("Clone this form?")) cloneMutation.mutate({ formId: form.id });
-                    }}
-                    disabled={cloneMutation.isPending}
-                    className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all disabled:opacity-50"
-                  >
-                    Clone
-                  </button>
-                  {form.status !== "archived" && (
-                    <>
-                      <button
-                        onClick={() => {
-                          if (confirm("Archive this form?")) {
-                            archiveMutation.mutate({ formId: form.id });
-                          }
-                        }}
-                        disabled={archiveMutation.isPending}
-                        className="text-xs px-3 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/20 rounded-lg transition-all disabled:opacity-50"
+                    {/* Actions */}
+                    <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                      <Link
+                        href={`/dashboard/forms/${form.id}/edit`}
+                        className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
                       >
-                        Archive
+                        Edit
+                      </Link>
+                      <Link
+                        href={`/dashboard/forms/${form.id}/preview`}
+                        className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
+                      >
+                        Preview
+                      </Link>
+                      <Link
+                        href={`/dashboard/forms/${form.id}/analytics`}
+                        className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
+                      >
+                        Analytics
+                      </Link>
+                      <Link
+                        href={`/dashboard/forms/${form.id}/responses`}
+                        className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
+                      >
+                        Responses
+                      </Link>
+                      {form.status === "draft" ? (
+                        <button
+                          onClick={() => publishMutation.mutate({ formId: form.id })}
+                          disabled={publishMutation.isPending}
+                          className="text-xs px-3 py-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-lg transition-all disabled:opacity-50"
+                        >
+                          Publish
+                        </button>
+                      ) : form.status === "published" ? (
+                        <button
+                          onClick={() => unpublishMutation.mutate({ formId: form.id })}
+                          disabled={unpublishMutation.isPending}
+                          className="text-xs px-3 py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 border border-yellow-500/30 rounded-lg transition-all disabled:opacity-50"
+                        >
+                          Unpublish
+                        </button>
+                      ) : null}
+                      <button
+                        onClick={() => copyLink(form.slug)}
+                        className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
+                      >
+                        Copy Link
                       </button>
                       <button
                         onClick={() => {
-                          if (
-                            confirm(
-                              "Move this form to trash? You can recover it within 7 days.",
-                            )
-                          ) {
-                            softDeleteMutation.mutate({ formIds: [form.id] });
-                          }
+                          if (confirm("Clone this form?"))
+                            cloneMutation.mutate({ formId: form.id });
                         }}
-                        disabled={softDeleteMutation.isPending}
-                        className="text-xs px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg transition-all disabled:opacity-50"
+                        disabled={cloneMutation.isPending}
+                        className="text-xs px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all disabled:opacity-50"
                       >
-                        Delete
+                        Clone
                       </button>
-                    </>
-                  )}
+                      {form.status !== "archived" && (
+                        <>
+                          <button
+                            onClick={() => {
+                              if (confirm("Archive this form?")) {
+                                archiveMutation.mutate({ formId: form.id });
+                              }
+                            }}
+                            disabled={archiveMutation.isPending}
+                            className="text-xs px-3 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/20 rounded-lg transition-all disabled:opacity-50"
+                          >
+                            Archive
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  "Move this form to trash? You can recover it within 7 days.",
+                                )
+                              ) {
+                                softDeleteMutation.mutate({ formIds: [form.id] });
+                              }
+                            }}
+                            disabled={softDeleteMutation.isPending}
+                            className="text-xs px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg transition-all disabled:opacity-50"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

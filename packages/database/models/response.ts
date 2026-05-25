@@ -6,13 +6,14 @@ import {
   index,
   varchar,
   doublePrecision,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { formsTable } from "./form";
 
 export const responsesTable = pgTable(
   "responses",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: uuid("id").defaultRandom().notNull(),
     formId: uuid("form_id")
       .notNull()
       .references(() => formsTable.id, { onDelete: "cascade" }),
@@ -37,6 +38,7 @@ export const responsesTable = pgTable(
     geoCity: varchar("geo_city", { length: 120 }),
   },
   (t) => [
+    primaryKey({ columns: [t.id, t.submittedAt] }),
     index("responses_form_id_idx").on(t.formId),
     index("responses_submitted_at_idx").on(t.submittedAt),
     index("responses_device_fingerprint_idx").on(t.deviceFingerprint),
