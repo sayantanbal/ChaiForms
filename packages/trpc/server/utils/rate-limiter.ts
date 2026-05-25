@@ -2,10 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-const inMemoryBuckets = new Map<
-  string,
-  Map<string, { count: number; resetAt: number }>
->();
+const inMemoryBuckets = new Map<string, Map<string, { count: number; resetAt: number }>>();
 
 let authRatelimit: Ratelimit | null = null;
 let mutationRatelimit: Ratelimit | null = null;
@@ -14,9 +11,7 @@ let submitRatelimit: Ratelimit | null = null;
 let unlockRatelimit: Ratelimit | null = null;
 
 function hasUpstashConfig(): boolean {
-  return Boolean(
-    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
-  );
+  return Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 }
 
 function getRedis(): Redis {
@@ -103,10 +98,7 @@ function assertInMemoryRateLimit(
   }
 
   if (bucket.count >= maxRequests) {
-    const retryAfterSeconds = Math.max(
-      1,
-      Math.ceil((bucket.resetAt - now) / 1000),
-    );
+    const retryAfterSeconds = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
     throw new TRPCError({
       code: "TOO_MANY_REQUESTS",
       message: `Rate limit exceeded. Retry after ${retryAfterSeconds} seconds.`,
@@ -126,10 +118,7 @@ export async function assertRateLimit(
   const { success, reset } = await limiter.limit(identifier);
 
   if (!success) {
-    const retryAfterSeconds = Math.max(
-      1,
-      Math.ceil((reset - Date.now()) / 1000),
-    );
+    const retryAfterSeconds = Math.max(1, Math.ceil((reset - Date.now()) / 1000));
     throw new TRPCError({
       code: "TOO_MANY_REQUESTS",
       message:
@@ -147,9 +136,7 @@ export async function assertAuthRateLimit(identifier: string): Promise<void> {
   await assertRateLimit(getAuthRatelimit(), identifier);
 }
 
-export async function assertMutationRateLimit(
-  identifier: string,
-): Promise<void> {
+export async function assertMutationRateLimit(identifier: string): Promise<void> {
   if (!hasUpstashConfig()) {
     assertInMemoryRateLimit("mutation", identifier, 60);
     return;
@@ -163,6 +150,14 @@ export async function assertQueryRateLimit(identifier: string): Promise<void> {
     return;
   }
   await assertRateLimit(getQueryRatelimit(), identifier);
+}
+
+export async function assertUnlockRateLimit(identifier: string): Promise<void> {
+  if (!hasUpstashConfig()) {
+    assertInMemoryRateLimit("unlock", identifier, 5, 60 * 60 * 1000);
+    return;
+  }
+  await assertRateLimit(getUnlockRatelimit(), identifier);
 }
 
 /** @internal Reset in-memory buckets between tests. */

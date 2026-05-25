@@ -1,17 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import {
-  db,
-  eq,
-  and,
-  count,
-  desc,
-  isNull,
-  isNotNull,
-  inArray,
-  gte,
-  not,
-} from "@repo/database";
+import { db, eq, and, count, desc, isNull, isNotNull, inArray, gte, not } from "@repo/database";
 import {
   formsTable,
   pagesTable,
@@ -20,11 +9,7 @@ import {
   workspaceMembersTable,
   workspacesTable,
 } from "@repo/database/schema";
-import {
-  formSettingsSchema,
-  fieldsUpsertSchema,
-  type FieldSchemaUnion,
-} from "@repo/schemas";
+import { formSettingsSchema, fieldsUpsertSchema, type FieldSchemaUnion } from "@repo/schemas";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 
@@ -35,6 +20,8 @@ import { getClientIp } from "../../utils/client-context";
 import { signUnlockToken } from "../../utils/jwt";
 import { sanitizeText } from "../../utils/sanitize";
 import { assertUnlockRateLimit } from "../../utils/unlock-rate-limit";
+import { ownedFormProcedure } from "../../middleware/ownership";
+import { formsService } from "@repo/services/forms";
 
 const TAGS_FORMS = ["Forms"];
 const TAGS_FIELDS = ["Forms", "Fields"];
@@ -67,16 +54,7 @@ export const formOutputSchema = z.object({
   slug: z.string(),
   status: z.enum(["draft", "published", "archived"]),
   visibility: z.enum(["public", "unlisted"]),
-  theme: z.enum([
-    "default",
-    "anime",
-    "movie",
-    "game",
-    "startup",
-    "tech_company",
-    "os",
-    "event",
-  ]),
+  theme: z.enum(["default", "anime", "movie", "game", "startup", "tech_company", "os", "event"]),
   fields: z.array(z.any()),
   thankyouMessage: z.string().nullable(),
   expiryDate: z.string().datetime().nullable(),
@@ -146,11 +124,7 @@ function generateSlug(): string {
 }
 
 async function assertOwnership(formId: string, userId: string) {
-  const [form] = await db
-    .select()
-    .from(formsTable)
-    .where(eq(formsTable.id, formId))
-    .limit(1);
+  const [form] = await db.select().from(formsTable).where(eq(formsTable.id, formId)).limit(1);
   if (!form) {
     throw new TRPCError({
       code: "NOT_FOUND",
@@ -180,31 +154,10 @@ export const formsRouter = router({
     .input(z.object({ title: z.string().min(1).max(255) }))
     .output(formOutputSchema)
     .mutation(async ({ input, ctx }) => {
-      let slug = generateSlug();
-      // Ensure uniqueness
-      for (let i = 0; i < 5; i++) {
-        const [existing] = await db
-          .select({ id: formsTable.id })
-          .from(formsTable)
-          .where(eq(formsTable.slug, slug))
-          .limit(1);
-        if (!existing) break;
-        slug = generateSlug();
-      }
-
-      const [form] = await db
-        .insert(formsTable)
-        .values({
-          title: sanitizeText(input.title),
-          creatorId: ctx.user.id,
-          slug,
-          status: "draft",
-          visibility: "unlisted",
-          fields: [],
-        })
-        .returning();
-
-      if (!form) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const form = await formsService.createForm({
+        title: input.title,
+        creatorId: ctx.user.id,
+      });
       return mapForm(form);
     }),
 
@@ -232,10 +185,7 @@ export const formsRouter = router({
       );
 
       const [totalResult, items] = await Promise.all([
-        db
-          .select({ count: count() })
-          .from(formsTable)
-          .where(activeFormsFilter),
+        db.select({ count: count() }).from(formsTable).where(activeFormsFilter),
         db
           .select()
           .from(formsTable)
@@ -284,9 +234,7 @@ export const formsRouter = router({
       const [form] = await db
         .select()
         .from(formsTable)
-        .where(
-          and(eq(formsTable.slug, input.slug), isNull(formsTable.deletedAt)),
-        )
+        .where(and(eq(formsTable.slug, input.slug), isNull(formsTable.deletedAt)))
         .limit(1);
 
       if (!form) {
@@ -307,7 +255,7 @@ export const formsRouter = router({
   // -------------------------------------------------------------------------
   // forms.update
   // -------------------------------------------------------------------------
-  update: protectedProcedure
+  update: ownedFormProcedure
     .meta({
       openapi: {
         method: "PATCH",
@@ -319,75 +267,14 @@ export const formsRouter = router({
     .output(formOutputSchema)
     .mutation(async ({ input, ctx }) => {
       const { formId, ...settings } = input;
-      const existing = await assertOwnership(formId, ctx.user.id);
-
-      // Slug uniqueness check
-      if (settings.slug && settings.slug !== existing.slug) {
-        const [conflict] = await db
-          .select({ id: formsTable.id })
-          .from(formsTable)
-          .where(eq(formsTable.slug, settings.slug))
-          .limit(1);
-        if (conflict) {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message: "A form with this slug already exists",
-          });
-        }
-      }
-
-      // Hash password if provided
-      let accessPasswordHash = existing.accessPasswordHash;
-      if (settings.accessPassword === null) {
-        accessPasswordHash = null;
-      } else if (settings.accessPassword) {
-        accessPasswordHash = await bcrypt.hash(settings.accessPassword, 10);
-      }
-
-      const updateData: Partial<typeof formsTable.$inferInsert> = {};
-      if (settings.title !== undefined)
-        updateData.title = sanitizeText(settings.title);
-      if (settings.description !== undefined)
-        updateData.description = settings.description
-          ? sanitizeText(settings.description)
-          : settings.description;
-      if (settings.slug !== undefined) updateData.slug = settings.slug;
-      if (settings.visibility !== undefined)
-        updateData.visibility = settings.visibility;
-      if (settings.theme !== undefined) updateData.theme = settings.theme;
-      if (settings.thankyouMessage !== undefined)
-        updateData.thankyouMessage = settings.thankyouMessage;
-      if (settings.expiryDate !== undefined)
-        updateData.expiryDate = settings.expiryDate
-          ? new Date(settings.expiryDate)
-          : null;
-      if (settings.responseLimit !== undefined)
-        updateData.responseLimit = settings.responseLimit;
-      if (settings.sendRespondentConfirmation !== undefined)
-        updateData.sendRespondentConfirmation =
-          settings.sendRespondentConfirmation;
-      if (settings.scope !== undefined) updateData.scope = settings.scope;
-      if (settings.workspaceId !== undefined)
-        updateData.workspaceId = settings.workspaceId;
-      if (settings.requiresAuth !== undefined)
-        updateData.requiresAuth = settings.requiresAuth;
-      if (settings.accessPassword !== undefined)
-        updateData.accessPasswordHash = accessPasswordHash;
-
-      const [updated] = await db
-        .update(formsTable)
-        .set(updateData)
-        .where(eq(formsTable.id, formId))
-        .returning();
-
-      if (!updated) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      return mapForm(updated);
+      const form = await formsService.updateForm(formId, ctx.form, settings);
+      return mapForm(form);
     }),
 
   // -------------------------------------------------------------------------
   // forms.publish
   // -------------------------------------------------------------------------
-  publish: protectedProcedure
+  publish: ownedFormProcedure
     .meta({
       openapi: {
         method: "POST",
@@ -405,72 +292,8 @@ export const formsRouter = router({
     )
     .output(formOutputSchema)
     .mutation(async ({ input, ctx }) => {
-      const existing = await assertOwnership(input.formId, ctx.user.id);
-
-      const updateData: Partial<typeof formsTable.$inferInsert> = {
-        status: "published",
-      };
-
-      if (input.scope !== undefined) {
-        updateData.scope = input.scope;
-        if (input.scope === "global") {
-          updateData.workspaceId = null;
-        }
-      }
-
-      if (input.workspaceId !== undefined) {
-        updateData.workspaceId = input.workspaceId;
-        if (input.workspaceId) {
-          updateData.scope = "workspace";
-        }
-      }
-
-      if (input.requiresAuth !== undefined) {
-        updateData.requiresAuth = input.requiresAuth;
-      }
-
-      if (
-        (updateData.scope ?? existing.scope) === "workspace" &&
-        (updateData.workspaceId ?? existing.workspaceId)
-      ) {
-        const workspaceId = updateData.workspaceId ?? existing.workspaceId!;
-        const [member] = await db
-          .select({ id: workspaceMembersTable.id })
-          .from(workspaceMembersTable)
-          .where(
-            and(
-              eq(workspaceMembersTable.workspaceId, workspaceId),
-              eq(workspaceMembersTable.userId, ctx.user.id),
-            ),
-          )
-          .limit(1);
-
-        const [owned] = await db
-          .select({ id: workspacesTable.id })
-          .from(workspacesTable)
-          .where(
-            and(
-              eq(workspacesTable.id, workspaceId),
-              eq(workspacesTable.ownerId, ctx.user.id),
-            ),
-          )
-          .limit(1);
-
-        if (!member && !owned) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "You are not a member of this workspace",
-          });
-        }
-      }
-
-      const [updated] = await db
-        .update(formsTable)
-        .set(updateData)
-        .where(eq(formsTable.id, input.formId))
-        .returning();
-      if (!updated) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      return mapForm(updated);
+      const form = await formsService.publishForm(input.formId, ctx.form, ctx.user.id, input);
+      return mapForm(form);
     }),
 
   // -------------------------------------------------------------------------
@@ -515,12 +338,7 @@ export const formsRouter = router({
       await db
         .update(formsTable)
         .set({ deletedAt: new Date() })
-        .where(
-          and(
-            eq(formsTable.id, input.formId),
-            eq(formsTable.creatorId, ctx.user.id),
-          ),
-        );
+        .where(and(eq(formsTable.id, input.formId), eq(formsTable.creatorId, ctx.user.id)));
       return { success: true };
     }),
 
@@ -544,12 +362,7 @@ export const formsRouter = router({
       await db
         .update(formsTable)
         .set({ deletedAt: new Date() })
-        .where(
-          and(
-            inArray(formsTable.id, input.formIds),
-            eq(formsTable.creatorId, ctx.user.id),
-          ),
-        );
+        .where(and(inArray(formsTable.id, input.formIds), eq(formsTable.creatorId, ctx.user.id)));
       return { success: true };
     }),
 
@@ -780,16 +593,19 @@ export const formsRouter = router({
       for (let i = 0; i < input.fields.length; i++) {
         const field = input.fields[i] as any;
         const earlierIds = new Set(fieldIds.slice(0, i));
-        
+
         if (field.conditionalRules) {
           if (Array.isArray(field.conditionalRules)) {
-             for (const rule of field.conditionalRules) {
-               if (rule.sourceFieldId && !earlierIds.has(rule.sourceFieldId)) {
-                 throw new TRPCError({ code: "BAD_REQUEST", message: `Rule references invalid field` });
-               }
-             }
+            for (const rule of field.conditionalRules) {
+              if (rule.sourceFieldId && !earlierIds.has(rule.sourceFieldId)) {
+                throw new TRPCError({
+                  code: "BAD_REQUEST",
+                  message: `Rule references invalid field`,
+                });
+              }
+            }
           } else {
-             validateRuleGroup(field.conditionalRules, earlierIds, field.label);
+            validateRuleGroup(field.conditionalRules, earlierIds, field.label);
           }
         }
 
@@ -953,9 +769,7 @@ export const formsRouter = router({
       },
     })
     .input(z.object({ formId: z.string().uuid() }))
-    .output(
-      z.array(pageOutputSchema),
-    )
+    .output(z.array(pageOutputSchema))
     .query(async ({ input, ctx }) => {
       await assertOwnership(input.formId, ctx.user.id);
       const pages = await db

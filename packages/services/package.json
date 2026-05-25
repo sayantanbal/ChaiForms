@@ -8,17 +8,20 @@
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@types/bcryptjs": "^3.0.0",
+    "bcryptjs": "^3.0.2",
     "dotenv-cli": "^11.0.0",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@paralleldrive/cuid2": "^2.2.2",
     "@repo/database": "workspace:*",
     "@repo/logger": "workspace:*",
-    "google-auth-library": "^10.5.0",
-    "resend": "^4.8.0",
-    "zod": "^4.3.5",
     "@repo/types": "workspace:*",
-    "@paralleldrive/cuid2": "^2.2.2"
+    "google-auth-library": "^10.5.0",
+    "nanoid": "3.3.7",
+    "resend": "^4.8.0",
+    "zod": "^4.3.5"
   }
 }

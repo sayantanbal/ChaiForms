@@ -102,6 +102,13 @@ app.use((req, res, next) => {
   next();
 });
 
+// CSRF token rotation middleware
+app.use((req, res, next) => {
+  const token = createCsrfToken();
+  res.cookie(CSRF_COOKIE_NAME, token, csrfCookieOptions(isProd));
+  next();
+});
+
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? env.BASE_URL;
 app.use(
   helmet({
