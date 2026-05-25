@@ -23,8 +23,10 @@
     ]
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
+    "playwright": "^1.60.0",
     "prettier": "^3.7.4",
     "turbo": "^2.7.2",
     "typescript": "5.9.2"

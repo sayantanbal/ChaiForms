@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ["@repo/ui"],
   images: {
     remotePatterns: [{ hostname: "chaiforms.dev" }],
     formats: ["image/avif", "image/webp"],

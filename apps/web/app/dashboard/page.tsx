@@ -1,5 +1,6 @@
 import { api } from "~/trpc/server";
 import Link from "next/link";
+import { DashboardTour } from "~/components/dashboard/dashboard-tour";
 
 export default async function DashboardPage() {
   let forms: Awaited<ReturnType<typeof api.forms.list.query>>["items"] = [];
@@ -11,7 +12,7 @@ export default async function DashboardPage() {
 
     // Aggregate total responses across all forms
     const summaries = await Promise.allSettled(
-      forms.map((f) => api.analytics.getSummary.query({ formId: f.id }))
+      forms.map((f) => api.analytics.getSummary.query({ formId: f.id })),
     );
     totalResponses = summaries.reduce((sum, r) => {
       if (r.status === "fulfilled") return sum + r.value.totalResponses;
@@ -21,13 +22,22 @@ export default async function DashboardPage() {
     // Not authed or error — layout handles redirect
   }
 
-
   const publishedCount = forms.filter((f) => f.status === "published").length;
 
   const STAT_CARDS = [
     { label: "Total Forms", value: forms.length, icon: "📝", color: "from-blue-500 to-cyan-500" },
-    { label: "Published", value: publishedCount, icon: "🌐", color: "from-green-500 to-emerald-500" },
-    { label: "Total Responses", value: totalResponses, icon: "📨", color: "from-orange-500 to-amber-500" },
+    {
+      label: "Published",
+      value: publishedCount,
+      icon: "🌐",
+      color: "from-green-500 to-emerald-500",
+    },
+    {
+      label: "Total Responses",
+      value: totalResponses,
+      icon: "📨",
+      color: "from-orange-500 to-amber-500",
+    },
   ];
 
   return (
@@ -41,11 +51,10 @@ export default async function DashboardPage() {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         {STAT_CARDS.map((card) => (
-          <div
-            key={card.label}
-            className="bg-gray-800/50 border border-white/10 rounded-xl p-5"
-          >
-            <div className={`inline-flex w-10 h-10 rounded-lg bg-gradient-to-br ${card.color} items-center justify-center text-lg mb-3`}>
+          <div key={card.label} className="bg-gray-800/50 border border-white/10 rounded-xl p-5">
+            <div
+              className={`inline-flex w-10 h-10 rounded-lg bg-gradient-to-br ${card.color} items-center justify-center text-lg mb-3`}
+            >
               {card.icon}
             </div>
             <div className="text-3xl font-bold">{card.value}</div>
@@ -94,11 +103,15 @@ export default async function DashboardPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                    form.status === "published" ? "bg-green-500/20 text-green-400" :
-                    form.status === "archived" ? "bg-gray-500/20 text-gray-400" :
-                    "bg-yellow-500/20 text-yellow-400"
-                  }`}>
+                  <span
+                    className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                      form.status === "published"
+                        ? "bg-green-500/20 text-green-400"
+                        : form.status === "archived"
+                          ? "bg-gray-500/20 text-gray-400"
+                          : "bg-yellow-500/20 text-yellow-400"
+                    }`}
+                  >
                     {form.status}
                   </span>
                   <Link
@@ -122,6 +135,7 @@ export default async function DashboardPage() {
           </div>
         </div>
       )}
+      <DashboardTour />
     </div>
   );
 }
