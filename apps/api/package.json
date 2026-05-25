@@ -7,7 +7,7 @@
     "dev": "dotenv -e ../../.env -- tsx watch ./src/index.ts",
     "test": "vitest run",
     "build": "tsup",
-    "lint": "eslint src/*"
+    "lint": "eslint src/"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

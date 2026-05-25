@@ -2,7 +2,7 @@
   "name": "trpc-monorepo",
   "private": true,
   "scripts": {
-    "build": "dotenv -- turbo build",
+    "build": "dotenv -v NODE_ENV=production -- turbo build",
     "dev": "dotenv -- turbo dev",
     "db:generate": "dotenv -- turbo db:generate",
     "db:migrate": "dotenv -- turbo db:migrate",

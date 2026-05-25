@@ -1,11 +1,17 @@
 import { createHash } from "node:crypto";
-import { initTRPC, TRPCError } from "@trpc/server";
+import {
+  initTRPC,
+  TRPCError,
+  type TRPCProcedureBuilder,
+  type TRPCRootObject,
+  type TRPCRuntimeConfigOptions,
+} from "@trpc/server";
 import type { OpenApiMeta } from "trpc-to-openapi";
 import { logger } from "@repo/logger";
 import { db, eq, and } from "@repo/database";
 import { apiKeys, workspacesTable, workspaceMembersTable } from "@repo/database/schema";
 
-import type { createContext } from "./context";
+import type { Context } from "./context";
 import { assertCsrf } from "./utils/csrf";
 import { getClientIp } from "./utils/client-context";
 import {
@@ -14,9 +20,44 @@ import {
   assertQueryRateLimit,
 } from "./utils/rate-limiter";
 
-export const tRPCContext = initTRPC
+type TRPCContext = TRPCRootObject<
+  Context,
+  OpenApiMeta,
+  TRPCRuntimeConfigOptions<Context, OpenApiMeta>
+>;
+
+type ProcedureBuilderWithContextOverrides<TContextOverrides> =
+  TRPCContext["procedure"] extends TRPCProcedureBuilder<
+    infer TContext,
+    infer TMeta,
+    any,
+    infer TInputIn,
+    infer TInputOut,
+    infer TOutputIn,
+    infer TOutputOut,
+    infer TCaller
+  >
+    ? TRPCProcedureBuilder<
+        TContext,
+        TMeta,
+        TContextOverrides,
+        TInputIn,
+        TInputOut,
+        TOutputIn,
+        TOutputOut,
+        TCaller
+      >
+    : never;
+
+type ProtectedContextOverrides = { user: NonNullable<Context["user"]> };
+type ApiTokenContextOverrides = { apiKeyWorkspaceId: string };
+
+type ProtectedProcedure = ProcedureBuilderWithContextOverrides<ProtectedContextOverrides>;
+type ApiTokenProcedure = ProcedureBuilderWithContextOverrides<ApiTokenContextOverrides>;
+
+export const tRPCContext: TRPCContext = initTRPC
   .meta<OpenApiMeta>()
-  .context<typeof createContext>()
+  .context<Context>()
   .create({
     errorFormatter({ shape, error, input, path }) {
       logger.error("tRPC error", {
@@ -29,7 +70,7 @@ export const tRPCContext = initTRPC
     },
   });
 
-export const router = tRPCContext.router;
+export const router: TRPCContext["router"] = tRPCContext.router;
 
 const csrfMiddleware = tRPCContext.middleware(({ ctx, next, type }) => {
   if (type === "mutation") {
@@ -89,73 +130,73 @@ const loggerMiddleware = tRPCContext.middleware(async ({ ctx, path, type, next }
   return result;
 });
 
-export const publicProcedure = tRPCContext.procedure
+export const publicProcedure: TRPCContext["procedure"] = tRPCContext.procedure
   .use(loggerMiddleware)
   .use(csrfMiddleware)
   .use(rateLimitMiddleware);
 
-export const protectedProcedure = publicProcedure.use(({ ctx, next }) => {
+export const protectedProcedure: ProtectedProcedure = publicProcedure.use(({ ctx, next }) => {
   if (!ctx.user) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
 
-export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+export const adminProcedure: ProtectedProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin") {
     throw new TRPCError({ code: "FORBIDDEN" });
   }
   return next({ ctx });
 });
 
-const workspaceAdminMiddleware = tRPCContext.middleware(async ({ ctx, next, getRawInput }) => {
-  const input = (await getRawInput()) as { workspaceId?: string };
-  const workspaceId = input?.workspaceId;
+export const workspaceAdminProcedure: ProtectedProcedure = protectedProcedure.use(
+  async ({ ctx, next, getRawInput }) => {
+    const input = (await getRawInput()) as { workspaceId?: string };
+    const workspaceId = input?.workspaceId;
 
-  if (!workspaceId) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "workspaceId is required",
-    });
-  }
+    if (!workspaceId) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "workspaceId is required",
+      });
+    }
 
-  const [workspace] = await db
-    .select()
-    .from(workspacesTable)
-    .where(eq(workspacesTable.id, workspaceId))
-    .limit(1);
+    const [workspace] = await db
+      .select()
+      .from(workspacesTable)
+      .where(eq(workspacesTable.id, workspaceId))
+      .limit(1);
 
-  if (!workspace) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "Workspace not found" });
-  }
+    if (!workspace) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Workspace not found" });
+    }
 
-  if (workspace.ownerId === ctx.user!.id) {
-    return next({ ctx });
-  }
+    if (workspace.ownerId === ctx.user.id) {
+      return next({ ctx });
+    }
 
-  const [member] = await db
-    .select()
-    .from(workspaceMembersTable)
-    .where(
-      and(
-        eq(workspaceMembersTable.workspaceId, workspaceId),
-        eq(workspaceMembersTable.userId, ctx.user!.id),
-        eq(workspaceMembersTable.role, "admin"),
-      ),
-    )
-    .limit(1);
+    const [member] = await db
+      .select()
+      .from(workspaceMembersTable)
+      .where(
+        and(
+          eq(workspaceMembersTable.workspaceId, workspaceId),
+          eq(workspaceMembersTable.userId, ctx.user.id),
+          eq(workspaceMembersTable.role, "admin"),
+        ),
+      )
+      .limit(1);
 
-  if (!member) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "Workspace admin access required",
-    });
-  }
+    if (!member) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Workspace admin access required",
+      });
+    }
 
-  return next({ ctx: { ...ctx, user: ctx.user } });
-});
-
-export const workspaceAdminProcedure = protectedProcedure.use(workspaceAdminMiddleware);
+    return next({ ctx: { ...ctx, user: ctx.user } });
+  },
+);
 
 const apiTokenMiddleware = tRPCContext.middleware(async ({ ctx, next }) => {
   const authHeader = ctx.req.headers.authorization;
@@ -192,6 +233,6 @@ const apiTokenMiddleware = tRPCContext.middleware(async ({ ctx, next }) => {
   return next({ ctx: { ...ctx, apiKeyWorkspaceId: apiKey.workspaceId } });
 });
 
-export const apiTokenProcedure = tRPCContext.procedure
+export const apiTokenProcedure: ApiTokenProcedure = tRPCContext.procedure
   .use(rateLimitMiddleware)
   .use(apiTokenMiddleware);

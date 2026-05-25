@@ -8,7 +8,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "lint": "eslint \"src/**/*.tsx?\"",
+    "lint": "eslint src/",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {

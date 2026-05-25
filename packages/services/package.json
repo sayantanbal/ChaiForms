@@ -2,6 +2,14 @@
   "name": "@repo/services",
   "version": "1.0.0",
   "private": true,
+  "exports": {
+    "./alerting": "./alerting/index.ts",
+    "./auth/neon-session": "./auth/neon-session.ts",
+    "./forms": "./forms/index.ts",
+    "./notification": "./notification/index.ts",
+    "./user": "./user/index.ts",
+    "./webhook": "./webhook/index.ts"
+  },
   "scripts": {
     "test": "vitest run"
   },

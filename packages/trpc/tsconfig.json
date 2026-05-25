@@ -2,7 +2,12 @@
   "extends": ["@repo/typescript-config/base.json"],
   "compilerOptions": {
     "module": "NodeNext",
-    "moduleResolution": "NodeNext"
+    "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": true,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true
   },
-  "include": ["server/", "client/"]
+  "include": ["server/", "client/"],
+  "exclude": ["server/__tests__/**"]
 }

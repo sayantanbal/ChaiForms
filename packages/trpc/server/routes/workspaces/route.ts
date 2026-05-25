@@ -1,7 +1,13 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { db, eq, and } from "@repo/database";
-import { workspacesTable, workspaceMembersTable, usersTable } from "@repo/database/schema";
+import {
+  apiKeys,
+  webhooks,
+  workspacesTable,
+  workspaceMembersTable,
+  usersTable,
+} from "@repo/database/schema";
 import { notificationService } from "@repo/services/notification";
 
 import { protectedProcedure, router, workspaceAdminProcedure } from "../../trpc";
@@ -512,8 +518,6 @@ export const workspacesRouter = router({
       const rawKey = `cf_${randomBytes(24).toString("base64url")}`;
       const keyHash = createHash("sha256").update(rawKey).digest("hex");
 
-      const { apiKeys } = await import("@repo/database/schema");
-
       const [apiKey] = await db
         .insert(apiKeys)
         .values({
@@ -555,8 +559,6 @@ export const workspacesRouter = router({
       ),
     )
     .query(async ({ input }) => {
-      const { apiKeys } = await import("@repo/database/schema");
-
       const keys = await db
         .select()
         .from(apiKeys)
@@ -587,8 +589,6 @@ export const workspacesRouter = router({
     )
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ input }) => {
-      const { apiKeys } = await import("@repo/database/schema");
-
       await db
         .delete(apiKeys)
         .where(and(eq(apiKeys.id, input.keyId), eq(apiKeys.workspaceId, input.workspaceId)));
@@ -624,8 +624,6 @@ export const workspacesRouter = router({
     .mutation(async ({ input }) => {
       const { randomBytes } = await import("node:crypto");
       const secret = `whsec_${randomBytes(24).toString("base64url")}`;
-
-      const { webhooks } = await import("@repo/database/schema");
 
       const [webhook] = await db
         .insert(webhooks)
@@ -673,8 +671,6 @@ export const workspacesRouter = router({
       ),
     )
     .query(async ({ input }) => {
-      const { webhooks } = await import("@repo/database/schema");
-
       const hooks = await db
         .select()
         .from(webhooks)
@@ -707,8 +703,6 @@ export const workspacesRouter = router({
     )
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ input }) => {
-      const { webhooks } = await import("@repo/database/schema");
-
       await db
         .delete(webhooks)
         .where(and(eq(webhooks.id, input.webhookId), eq(webhooks.workspaceId, input.workspaceId)));

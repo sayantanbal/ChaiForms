@@ -9,6 +9,7 @@ import {
   usersTable,
 } from "@repo/database/schema";
 import { notificationService } from "@repo/services/notification";
+import { WebhookService } from "@repo/services/webhook";
 import { submitResponseSchema, type FieldSchemaUnion } from "@repo/schemas";
 import { z } from "zod";
 
@@ -367,14 +368,10 @@ export const responsesRouter = router({
 
       // Fire webhook asynchronously
       if (form.workspaceId) {
-        import("@repo/services/webhook")
-          .then(({ WebhookService }) => {
-            WebhookService.trigger(form.workspaceId as string, "form.response.submitted", {
-              formId: form.id,
-              responseId: response.id,
-            });
-          })
-          .catch((err) => console.error("Failed to load WebhookService", err));
+        WebhookService.trigger(form.workspaceId as string, "form.response.submitted", {
+          formId: form.id,
+          responseId: response.id,
+        }).catch((err) => console.error("Failed to trigger webhook", err));
       }
 
       return { success: true, responseId: response.id };
