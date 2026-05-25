@@ -1,11 +1,7 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from "vitest";
 import { authRouter } from "../routes/auth/route";
 import { adminRouter } from "../routes/admin/route";
-import {
-  CSRF_COOKIE_NAME,
-  CSRF_HEADER_NAME,
-  createCsrfToken,
-} from "../utils/csrf";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, createCsrfToken } from "../utils/csrf";
 import { db } from "@repo/database";
 import { signRefreshJwt } from "../utils/jwt";
 
@@ -67,6 +63,7 @@ vi.mock("google-auth-library", () => {
 });
 
 vi.mock("@repo/database", () => ({
+  isNull: vi.fn(),
   db: {
     select: vi.fn(),
     insert: vi.fn(),
@@ -250,7 +247,11 @@ describe("auth router", () => {
     const result = await caller.demoLogin({ email: "demo@chaiforms.dev" });
 
     expect(result.user.email).toBe(baseUser.email);
-    expect(ctx.res.cookie).toHaveBeenCalledWith("chaiforms-access", expect.any(String), expect.anything());
+    expect(ctx.res.cookie).toHaveBeenCalledWith(
+      "chaiforms-access",
+      expect.any(String),
+      expect.anything(),
+    );
   });
 
   it("demoLogin rejects blocked user", async () => {
@@ -270,7 +271,11 @@ describe("auth router", () => {
     const refreshJwt = signRefreshJwt(baseUser.id, fakeFamily);
     const fakeCookie = `plain-token:${refreshJwt}`;
 
-    const ctx = createContext({ method: "POST", withCsrf: true, cookies: { "chaiforms-refresh": fakeCookie } });
+    const ctx = createContext({
+      method: "POST",
+      withCsrf: true,
+      cookies: { "chaiforms-refresh": fakeCookie },
+    });
     const caller = authRouter.createCaller(ctx);
 
     const mockSelectChain = {
@@ -278,8 +283,8 @@ describe("auth router", () => {
       where: vi.fn().mockReturnThis(),
       limit: vi
         .fn()
-        .mockResolvedValueOnce([ { id: "token-id", expiresAt: new Date(Date.now() + 100000) } ])
-        .mockResolvedValueOnce([ baseUser ])
+        .mockResolvedValueOnce([{ id: "token-id", expiresAt: new Date(Date.now() + 100000) }])
+        .mockResolvedValueOnce([baseUser]),
     };
     mockDb.select.mockReturnValue(mockSelectChain as any);
 
@@ -290,7 +295,11 @@ describe("auth router", () => {
     expect(result.success).toBe(true);
     expect(mockDb.delete).toHaveBeenCalled();
     expect(mockDb.insert).toHaveBeenCalled();
-    expect(ctx.res.cookie).toHaveBeenCalledWith("chaiforms-access", expect.any(String), expect.anything());
+    expect(ctx.res.cookie).toHaveBeenCalledWith(
+      "chaiforms-access",
+      expect.any(String),
+      expect.anything(),
+    );
   });
 
   it("refreshToken detects reuse and revokes family", async () => {
@@ -298,7 +307,11 @@ describe("auth router", () => {
     const refreshJwt = signRefreshJwt(baseUser.id, fakeFamily);
     const fakeCookie = `plain-token:${refreshJwt}`;
 
-    const ctx = createContext({ method: "POST", withCsrf: true, cookies: { "chaiforms-refresh": fakeCookie } });
+    const ctx = createContext({
+      method: "POST",
+      withCsrf: true,
+      cookies: { "chaiforms-refresh": fakeCookie },
+    });
     const caller = authRouter.createCaller(ctx);
 
     mockSelect([]);

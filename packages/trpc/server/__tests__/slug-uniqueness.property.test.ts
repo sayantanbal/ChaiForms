@@ -1,20 +1,18 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import * as fc from "fast-check";
 import { formsRouter } from "../routes/forms/route";
-import {
-  CSRF_COOKIE_NAME,
-  CSRF_HEADER_NAME,
-  createCsrfToken,
-} from "../utils/csrf";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, createCsrfToken } from "../utils/csrf";
 import { db } from "@repo/database";
 import { validSlugArb } from "./test-arbitraries";
 
 vi.mock("@repo/database", () => ({
+  isNull: vi.fn(),
   db: {
     select: vi.fn(),
     update: vi.fn(),
   },
   eq: vi.fn(),
+  and: vi.fn(),
 }));
 
 vi.mock("@repo/database/schema", () => ({
@@ -77,41 +75,42 @@ describe("forms.update slug uniqueness", () => {
       fc.asyncProperty(
         validSlugArb().filter((slug) => slug !== "old-slug"),
         async (slug) => {
-        const formId = "555597a8-12d4-42b7-a8a2-231cbfe69a71";
-        const form = {
-          id: formId,
-          creatorId: user.id,
-          title: "Title",
-          description: null,
-          slug: "old-slug",
-          status: "draft",
-          visibility: "unlisted",
-          theme: "default",
-          fields: [],
-          thankyouMessage: null,
-          expiryDate: null,
-          responseLimit: null,
-          accessPasswordHash: null,
-          sendRespondentConfirmation: false,
-          createdAt: new Date(),
-          updatedAt: null,
-        };
+          const formId = "555597a8-12d4-42b7-a8a2-231cbfe69a71";
+          const form = {
+            id: formId,
+            creatorId: user.id,
+            title: "Title",
+            description: null,
+            slug: "old-slug",
+            status: "draft",
+            visibility: "unlisted",
+            theme: "default",
+            fields: [],
+            thankyouMessage: null,
+            expiryDate: null,
+            responseLimit: null,
+            accessPasswordHash: null,
+            sendRespondentConfirmation: false,
+            createdAt: new Date(),
+            updatedAt: null,
+          };
 
-        const selectQueue: unknown[][] = [[form], [{ id: "another-form" }]]; // First is ownership check, second is conflict check
+          const selectQueue: unknown[][] = [[form], [{ id: "another-form" }]]; // First is ownership check, second is conflict check
 
-        mockDb.select.mockImplementation(() => ({
-          from: vi.fn().mockReturnThis(),
-          where: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockImplementation(() => Promise.resolve(selectQueue.shift() ?? [])),
-        }));
+          mockDb.select.mockImplementation(() => ({
+            from: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockImplementation(() => Promise.resolve(selectQueue.shift() ?? [])),
+          }));
 
-        const ctx = createContext();
-        const caller = formsRouter.createCaller(ctx as any);
-        
-        await expect(caller.update({ formId, slug })).rejects.toMatchObject({
-          code: "CONFLICT",
-        });
-      }),
+          const ctx = createContext();
+          const caller = formsRouter.createCaller(ctx as any);
+
+          await expect(caller.update({ formId, slug })).rejects.toMatchObject({
+            code: "CONFLICT",
+          });
+        },
+      ),
       { numRuns: 100 },
     );
   });

@@ -2,14 +2,11 @@ import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import * as fc from "fast-check";
 import bcrypt from "bcryptjs";
 import { formsRouter } from "../routes/forms/route";
-import {
-  CSRF_COOKIE_NAME,
-  CSRF_HEADER_NAME,
-  createCsrfToken,
-} from "../utils/csrf";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, createCsrfToken } from "../utils/csrf";
 import { db } from "@repo/database";
 
 vi.mock("@repo/database", () => ({
+  isNull: vi.fn(),
   db: {
     select: vi.fn(),
     update: vi.fn(),
@@ -110,9 +107,7 @@ describe("forms.update password hashing", () => {
           mockDb.select.mockImplementation(() => ({
             from: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
-            limit: vi
-              .fn()
-              .mockImplementation(() => Promise.resolve(selectQueue.shift() ?? [])),
+            limit: vi.fn().mockImplementation(() => Promise.resolve(selectQueue.shift() ?? [])),
           }));
 
           let updateData: Record<string, unknown> | null = null;

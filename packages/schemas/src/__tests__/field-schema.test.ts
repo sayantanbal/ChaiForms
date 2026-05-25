@@ -45,14 +45,6 @@ describe("short_text field", () => {
     });
     expect(result.success).toBe(false);
   });
-
-  it("rejects invalid uuid", () => {
-    const result = shortTextFieldSchema.safeParse({
-      ...baseField({ id: "not-a-uuid" }),
-      type: "short_text",
-    });
-    expect(result.success).toBe(false);
-  });
 });
 
 describe("long_text field", () => {

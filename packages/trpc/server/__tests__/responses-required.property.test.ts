@@ -35,6 +35,7 @@ vi.mock("../utils/analytics-broadcast", () => ({
 }));
 
 vi.mock("@repo/database", () => ({
+  isNull: vi.fn(),
   db: {
     select: vi.fn(),
     insert: vi.fn(),
@@ -65,11 +66,7 @@ vi.mock("@repo/database/schema", () => ({
 
 import { responsesRouter } from "../routes/responses/route";
 import { db } from "@repo/database";
-import {
-  CSRF_COOKIE_NAME,
-  CSRF_HEADER_NAME,
-  createCsrfToken,
-} from "../utils/csrf";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, createCsrfToken } from "../utils/csrf";
 
 const mockDb = db as unknown as {
   select: ReturnType<typeof vi.fn>;
@@ -155,8 +152,8 @@ describe("responses.submit required fields", () => {
             error = err;
           }
 
-          const fieldErrors = (error as { cause?: { fieldErrors?: Record<string, string> } })
-            ?.cause?.fieldErrors;
+          const fieldErrors = (error as { cause?: { fieldErrors?: Record<string, string> } })?.cause
+            ?.fieldErrors;
 
           expect(fieldErrors).toBeTruthy();
           if (fieldErrors) {

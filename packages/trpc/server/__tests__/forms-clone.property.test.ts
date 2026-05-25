@@ -1,14 +1,11 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import * as fc from "fast-check";
 import { formsRouter } from "../routes/forms/route";
-import {
-  CSRF_COOKIE_NAME,
-  CSRF_HEADER_NAME,
-  createCsrfToken,
-} from "../utils/csrf";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, createCsrfToken } from "../utils/csrf";
 import { db } from "@repo/database";
 
 vi.mock("@repo/database", () => ({
+  isNull: vi.fn(),
   db: {
     select: vi.fn(),
     insert: vi.fn(),

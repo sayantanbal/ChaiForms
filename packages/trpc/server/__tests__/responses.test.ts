@@ -46,6 +46,7 @@ const { fetchDisplayAnswersForResponses } = vi.hoisted(() => ({
 }));
 
 vi.mock("@repo/database", () => ({
+  isNull: vi.fn(),
   db: {
     select: vi.fn(),
     insert: vi.fn(),

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@repo/database", () => ({
+  isNull: vi.fn(),
   db: {
     select: vi.fn(),
   },
@@ -107,9 +108,9 @@ describe("admin router", () => {
       .mockImplementationOnce(() => ({
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
-        groupBy: vi.fn().mockResolvedValue([
-          { formId: "c0dd8d10-388f-4dcb-92c2-8419db1ca347", cnt: 3 },
-        ]),
+        groupBy: vi
+          .fn()
+          .mockResolvedValue([{ formId: "c0dd8d10-388f-4dcb-92c2-8419db1ca347", cnt: 3 }]),
       }));
 
     const caller = adminRouter.createCaller(adminContext);
@@ -142,9 +143,9 @@ describe("admin router", () => {
       .mockImplementationOnce(() => ({
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
-        groupBy: vi.fn().mockResolvedValue([
-          { creatorId: "080f55cf-5095-460b-8dce-09d5dd2bd5ea", cnt: 4 },
-        ]),
+        groupBy: vi
+          .fn()
+          .mockResolvedValue([{ creatorId: "080f55cf-5095-460b-8dce-09d5dd2bd5ea", cnt: 4 }]),
       }));
 
     const caller = adminRouter.createCaller(adminContext);

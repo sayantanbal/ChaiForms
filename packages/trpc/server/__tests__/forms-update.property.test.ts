@@ -1,15 +1,12 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import * as fc from "fast-check";
 import { formsRouter } from "../routes/forms/route";
-import {
-  CSRF_COOKIE_NAME,
-  CSRF_HEADER_NAME,
-  createCsrfToken,
-} from "../utils/csrf";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, createCsrfToken } from "../utils/csrf";
 import { db } from "@repo/database";
 import { validSlugArb } from "./test-arbitraries";
 
 vi.mock("@repo/database", () => ({
+  isNull: vi.fn(),
   db: {
     select: vi.fn(),
     update: vi.fn(),
@@ -107,7 +104,7 @@ const settingsArb = fc.record(
           min: new Date("2024-01-01T00:00:00.000Z"),
           max: new Date("2025-12-31T23:59:59.000Z"),
         })
-        .filter(d => !Number.isNaN(d.getTime()))
+        .filter((d) => !Number.isNaN(d.getTime()))
         .map((d) => d.toISOString().replace(/\.\d{3}Z$/, "Z")),
       { nil: undefined },
     ),
@@ -152,9 +149,7 @@ describe("forms.update", () => {
         mockDb.select.mockImplementation(() => ({
           from: vi.fn().mockReturnThis(),
           where: vi.fn().mockReturnThis(),
-          limit: vi
-            .fn()
-            .mockImplementation(() => Promise.resolve(selectQueue.shift() ?? [])),
+          limit: vi.fn().mockImplementation(() => Promise.resolve(selectQueue.shift() ?? [])),
         }));
 
         mockDb.update.mockImplementation(() => {
@@ -179,11 +174,9 @@ describe("forms.update", () => {
         if (settings.slug !== undefined) expectedKeys.push("slug");
         if (settings.visibility !== undefined) expectedKeys.push("visibility");
         if (settings.theme !== undefined) expectedKeys.push("theme");
-        if (settings.thankyouMessage !== undefined)
-          expectedKeys.push("thankyouMessage");
+        if (settings.thankyouMessage !== undefined) expectedKeys.push("thankyouMessage");
         if (settings.expiryDate !== undefined) expectedKeys.push("expiryDate");
-        if (settings.responseLimit !== undefined)
-          expectedKeys.push("responseLimit");
+        if (settings.responseLimit !== undefined) expectedKeys.push("responseLimit");
         if (settings.sendRespondentConfirmation !== undefined)
           expectedKeys.push("sendRespondentConfirmation");
 

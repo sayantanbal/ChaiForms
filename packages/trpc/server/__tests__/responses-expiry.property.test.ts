@@ -31,6 +31,7 @@ vi.mock("../utils/jwt", () => ({
 }));
 
 vi.mock("@repo/database", () => ({
+  isNull: vi.fn(),
   db: {
     select: vi.fn(),
     insert: vi.fn(),
@@ -61,11 +62,7 @@ vi.mock("@repo/database/schema", () => ({
 
 import { responsesRouter } from "../routes/responses/route";
 import { db } from "@repo/database";
-import {
-  CSRF_COOKIE_NAME,
-  CSRF_HEADER_NAME,
-  createCsrfToken,
-} from "../utils/csrf";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, createCsrfToken } from "../utils/csrf";
 
 const mockDb = db as unknown as {
   select: ReturnType<typeof vi.fn>;
@@ -113,7 +110,7 @@ describe("responses.submit expiry", () => {
   it("rejects submissions after expiry date", async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.date({ max: new Date(Date.now() - 1000) }).filter(d => !Number.isNaN(d.getTime())),
+        fc.date({ max: new Date(Date.now() - 1000) }).filter((d) => !Number.isNaN(d.getTime())),
         async (expiryDate) => {
           const form = {
             id: "f0d0c1c2-73ad-4f30-8a1c-2f0b7a9d2d2f",

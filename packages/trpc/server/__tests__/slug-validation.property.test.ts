@@ -1,15 +1,12 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import * as fc from "fast-check";
 import { formsRouter } from "../routes/forms/route";
-import {
-  CSRF_COOKIE_NAME,
-  CSRF_HEADER_NAME,
-  createCsrfToken,
-} from "../utils/csrf";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, createCsrfToken } from "../utils/csrf";
 import { db } from "@repo/database";
 import { validSlugArb } from "./test-arbitraries";
 
 vi.mock("@repo/database", () => ({
+  isNull: vi.fn(),
   db: {
     select: vi.fn(),
     update: vi.fn(),
@@ -109,9 +106,7 @@ describe("forms.update slug validation", () => {
         mockDb.select.mockImplementation(() => ({
           from: vi.fn().mockReturnThis(),
           where: vi.fn().mockReturnThis(),
-          limit: vi
-            .fn()
-            .mockImplementation(() => Promise.resolve(selectQueue.shift() ?? [])),
+          limit: vi.fn().mockImplementation(() => Promise.resolve(selectQueue.shift() ?? [])),
         }));
 
         mockDb.update.mockImplementation(() => ({
@@ -133,12 +128,19 @@ describe("forms.update slug validation", () => {
   it("rejects invalid slugs", async () => {
     await fc.assert(
       fc.asyncProperty(invalidSlugArb, async (slug) => {
+        const selectQueue: unknown[][] = [[baseForm]];
+        mockDb.select.mockImplementation(() => ({
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockImplementation(() => Promise.resolve(selectQueue.shift() ?? [])),
+        }));
+
         const ctx = createContext();
         const caller = formsRouter.createCaller(ctx as any);
 
-        await expect(
-          caller.update({ formId: baseForm.id, slug }),
-        ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+        await expect(caller.update({ formId: baseForm.id, slug })).rejects.toMatchObject({
+          code: "BAD_REQUEST",
+        });
       }),
       { numRuns: 100 },
     );

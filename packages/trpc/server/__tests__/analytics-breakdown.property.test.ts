@@ -4,6 +4,7 @@ import { analyticsRouter } from "../routes/analytics/route";
 import { db } from "@repo/database";
 
 vi.mock("@repo/database", () => ({
+  isNull: vi.fn(),
   db: {
     select: vi.fn(),
   },

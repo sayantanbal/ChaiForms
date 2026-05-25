@@ -267,8 +267,15 @@ export const formsRouter = router({
     .output(formOutputSchema)
     .mutation(async ({ input, ctx }) => {
       const { formId, ...settings } = input;
-      const form = await formsService.updateForm(formId, ctx.form, settings);
-      return mapForm(form);
+      try {
+        const form = await formsService.updateForm(formId, ctx.form, settings);
+        return mapForm(form);
+      } catch (err: any) {
+        if (err.message?.startsWith("CONFLICT:")) {
+          throw new TRPCError({ code: "CONFLICT", message: err.message });
+        }
+        throw err;
+      }
     }),
 
   // -------------------------------------------------------------------------

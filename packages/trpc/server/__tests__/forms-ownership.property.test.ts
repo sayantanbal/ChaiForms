@@ -1,14 +1,11 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import * as fc from "fast-check";
 import { formsRouter } from "../routes/forms/route";
-import {
-  CSRF_COOKIE_NAME,
-  CSRF_HEADER_NAME,
-  createCsrfToken,
-} from "../utils/csrf";
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, createCsrfToken } from "../utils/csrf";
 import { db } from "@repo/database";
 
 vi.mock("@repo/database", () => ({
+  isNull: vi.fn(),
   db: {
     select: vi.fn(),
     update: vi.fn(),
@@ -92,30 +89,22 @@ describe("forms ownership", () => {
           limit: vi.fn().mockResolvedValue([form]),
         }));
 
-        const updateCaller = formsRouter.createCaller(
-          createContext(otherUserId, "PATCH"),
-        );
-        const deleteCaller = formsRouter.createCaller(
-          createContext(otherUserId, "DELETE"),
-        );
-        const cloneCaller = formsRouter.createCaller(
-          createContext(otherUserId, "POST"),
-        );
-        const fieldsCaller = formsRouter.createCaller(
-          createContext(otherUserId, "PUT"),
+        const updateCaller = formsRouter.createCaller(createContext(otherUserId, "PATCH"));
+        const deleteCaller = formsRouter.createCaller(createContext(otherUserId, "DELETE"));
+        const cloneCaller = formsRouter.createCaller(createContext(otherUserId, "POST"));
+        const fieldsCaller = formsRouter.createCaller(createContext(otherUserId, "PUT"));
+
+        await expect(updateCaller.update({ formId: form.id, title: "Nope" })).rejects.toMatchObject(
+          { code: "FORBIDDEN" },
         );
 
-        await expect(
-          updateCaller.update({ formId: form.id, title: "Nope" }),
-        ).rejects.toMatchObject({ code: "FORBIDDEN" });
+        await expect(deleteCaller.delete({ formId: form.id })).rejects.toMatchObject({
+          code: "FORBIDDEN",
+        });
 
-        await expect(
-          deleteCaller.delete({ formId: form.id }),
-        ).rejects.toMatchObject({ code: "FORBIDDEN" });
-
-        await expect(
-          cloneCaller.clone({ formId: form.id }),
-        ).rejects.toMatchObject({ code: "FORBIDDEN" });
+        await expect(cloneCaller.clone({ formId: form.id })).rejects.toMatchObject({
+          code: "FORBIDDEN",
+        });
 
         await expect(
           fieldsCaller.fieldsUpsert({
