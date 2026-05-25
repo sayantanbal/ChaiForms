@@ -2842,6 +2842,7 @@ packages:
       {
         integrity: sha512-vU0tKhriUu45t3Km6fRMERnAht6psdovR8MVSyukwTypznLatWOWdDQkgaiCmwmaLMPm9omApeB+9bE2MAQbPw==,
       }
+    hasBin: true
     peerDependencies:
       next: ">=16.0.0"
       react: ">=18.0.0"
@@ -7394,6 +7395,7 @@ packages:
       {
         integrity: sha512-4EQQr6wXwS+ZJSzaR5ZCrYgLxqvUjdXctaEtBqHcbkW944B1NQyO4qpdHQbXBONfwxXdkAY81HH4+LUfrg+zPw==,
       }
+    hasBin: true
     peerDependencies:
       eslint: ">=7.0.0"
 
@@ -7458,6 +7460,7 @@ packages:
         integrity: sha512-BhHmn2yNOFA9H9JmmIVKJmd288g9hrVRDkdoIgRCRuSySRUHH7r/DI6aAXW9T1WwUuY3DFgrcaqB+deURBLR5g==,
       }
     engines: { node: ^18.18.0 || ^20.9.0 || >=21.1.0 }
+    hasBin: true
     peerDependencies:
       jiti: "*"
     peerDependenciesMeta:
@@ -9781,6 +9784,7 @@ packages:
         integrity: sha512-Y+KbmDbefYtHDDQKLNrmzE/YYzG2msqo2VXhzh5yrJ54tx/6TmGdkR5+kP9ma7i7LwZpZMfoY3m/AoPPPKxtVw==,
       }
     engines: { node: ">=20.9.0" }
+    hasBin: true
     peerDependencies:
       "@opentelemetry/api": ^1.1.0
       "@playwright/test": ^1.51.1
@@ -11800,6 +11804,7 @@ packages:
         integrity: sha512-ks6Vjr/jEw0P1gmOVwutM3B7fWxoWBL2KRDb1JfqGVawBmO5UsvmWOQFGHBPl5yxYz4eERr19E6L7NMv+Fej4w==,
       }
     engines: { node: ^18 || >=20 }
+    hasBin: true
     peerDependencies:
       typescript: ^5.0.0
     peerDependenciesMeta:
@@ -11824,6 +11829,7 @@ packages:
         integrity: sha512-xtgkqwdhpKWr3tKPmCkvYmS9xnQK3m3XgxZHwSUjvfTjp7YfXe5tT3GgWi0F2N+ZSMsOeWeZFh7ZZFg5iPhing==,
       }
     engines: { node: ">=18" }
+    hasBin: true
     peerDependencies:
       "@microsoft/api-extractor": ^7.36.0
       "@swc/core": ^1
@@ -12124,6 +12130,7 @@ packages:
       {
         integrity: sha512-Js0m9cx+qOgDxo0eMiFGEueWztz+d4+M3rGlmKPT+T4IS/jP4ylw3Nwpu6cpTTP8R1MAC1kF4VbdLt3ARf209w==,
       }
+    hasBin: true
     peerDependencies:
       browserslist: ">= 4.21.0"
 
@@ -12265,6 +12272,7 @@ packages:
         integrity: sha512-/4XH147Ui7OGTjg3HbdWe5arnZQSbfuRzdr9Ec7TQi5I7R+ir0Rlc9GIvD4v0XZurELqA035KVXJXpR61xhiTA==,
       }
     engines: { node: ^20.19.0 || >=22.12.0 }
+    hasBin: true
     peerDependencies:
       "@types/node": ^20.19.0 || >=22.12.0
       jiti: ">=1.21.0"
@@ -12307,6 +12315,7 @@ packages:
         integrity: sha512-LUCP5ev3GURDysTWiP47wRRUpLKMOfPh+yKTx3kVIEiu5KOMeqzpnYNsKyOoVrULivR8tLcks4+lga33Whn90A==,
       }
     engines: { node: ^18.0.0 || ^20.0.0 || >=22.0.0 }
+    hasBin: true
     peerDependencies:
       "@edge-runtime/vm": "*"
       "@types/debug": ^4.1.12
@@ -12343,6 +12352,7 @@ packages:
         integrity: sha512-nMZBOwuzabUO0nLgIcc6rycZEebF6eeUfaiQx9+WSk8e29IbLvPU9feI6tqW4kTo3hvoYAJkMh8n8D0fuISphg==,
       }
     engines: { node: ">=12" }
+    hasBin: true
     peerDependencies:
       "@vue/composition-api": ^1.0.0-rc.1
       vue: ^3.0.0-0 || ^2.6.0
