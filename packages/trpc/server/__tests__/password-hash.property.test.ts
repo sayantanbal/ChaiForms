@@ -97,7 +97,14 @@ describe("forms.update password hashing", () => {
   it("hashes access passwords", async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.string({ minLength: 4, maxLength: 16 }),
+        fc
+          .tuple(
+            fc.constantFrom("a", "b"),
+            fc.constantFrom("A", "B"),
+            fc.constantFrom("0", "1"),
+            fc.string({ minLength: 5, maxLength: 12 }),
+          )
+          .map(([a, b, c, rest]) => `${a}${b}${c}${rest}`),
         async (password) => {
           const selectQueue: unknown[][] = [[baseForm]];
           mockDb.select.mockImplementation(() => ({

@@ -11,6 +11,7 @@ import { FormRenderer } from "~/components/form-renderer/form-renderer";
 import { FormNotFound } from "~/components/form-renderer/form-not-found";
 import { FormClosed } from "~/components/form-renderer/form-closed";
 import { resolveThemeKey } from "~/lib/themes";
+import { SafeText } from "~/components/safe-text";
 
 export default function PublicFormPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -128,11 +129,16 @@ export default function PublicFormPage() {
 
         {/* Form header */}
         <div className="max-w-3xl mx-auto px-6 pt-16 pb-6 text-center">
-          <h1 className="text-3xl sm:text-4xl font-black text-[var(--form-text)] mb-3">
+          <SafeText
+            as="h1"
+            className="text-3xl sm:text-4xl font-black text-[var(--form-text)] mb-3"
+          >
             {form.title}
-          </h1>
+          </SafeText>
           {form.description && (
-            <p className="text-[var(--form-muted)] text-lg">{form.description}</p>
+            <SafeText as="p" className="text-[var(--form-muted)] text-lg">
+              {form.description}
+            </SafeText>
           )}
         </div>
 

@@ -40,3 +40,4 @@ yarn-error.log*
 # skills
 .agent
 .kiro/steering
+base_requirement.txt

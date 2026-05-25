@@ -455,7 +455,7 @@ async function seed() {
   // ---- 3. Published forms --------------------------------------------------
   console.log("Creating published forms...");
 
-  const DEMO_PASSWORD_HASH = await bcrypt.hash("demo1234", 10);
+  const DEMO_PASSWORD_HASH = await bcrypt.hash("Demo1234", 10);
 
   const formDefs = [
     {
@@ -504,7 +504,7 @@ async function seed() {
     {
       slug: "startup-idea-validator",
       title: "Startup Idea Validator",
-      description: "Validate your startup idea with community wisdom. Password: demo1234",
+      description: "Validate your startup idea with community wisdom. Password: Demo1234",
       theme: "startup" as const,
       visibility: "unlisted" as const,
       fields: startupFormFields,
@@ -710,7 +710,7 @@ async function seed() {
   console.log("  Creator: demo@chaiforms.dev  (use demoLogin bypass)");
   console.log("  Admin:   admin@chaiforms.dev (use demoLogin bypass)");
   console.log("  Password-protected form slug: startup-idea-validator");
-  console.log("  Form password: demo1234");
+  console.log("  Form password: Demo1234");
   console.log("  Workspace form slug: demo-workspace-judge-form (requires auth + membership)");
   process.exit(0);
 }

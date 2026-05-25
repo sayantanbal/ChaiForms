@@ -132,8 +132,12 @@ export function SettingsPanel({ settings, onUpdate }: SettingsPanelProps) {
 
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Access Password (optional)</label>
+          <p className="text-xs text-muted-foreground">
+            Min 8 characters with uppercase, lowercase, and a number.
+          </p>
           <input
             type="password"
+            minLength={8}
             placeholder="Leave blank for no password"
             value={settings.accessPassword || ""}
             onChange={(e) => onUpdate({ accessPassword: e.target.value || null })}

@@ -15,6 +15,10 @@ vi.mock("@repo/database", () => ({
   desc: vi.fn(),
 }));
 
+vi.mock("../utils/unlock-rate-limit", () => ({
+  assertUnlockRateLimit: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@repo/database/schema", () => ({
   formsTable: {
     id: "id",
@@ -32,7 +36,14 @@ describe("forms.unlock", () => {
     await fc.assert(
       fc.asyncProperty(
         fc.uuid(),
-        fc.string({ minLength: 4, maxLength: 12 }),
+        fc
+          .tuple(
+            fc.constantFrom("a", "b", "c"),
+            fc.constantFrom("A", "B", "C"),
+            fc.constantFrom("0", "1", "2"),
+            fc.string({ minLength: 5, maxLength: 8 }),
+          )
+          .map(([a, b, c, rest]) => `${a}${b}${c}${rest}`),
         async (formId, password) => {
           const hash = await bcrypt.hash(password, 8);
           const form = {
@@ -70,8 +81,22 @@ describe("forms.unlock", () => {
     await fc.assert(
       fc.asyncProperty(
         fc.uuid(),
-        fc.string({ minLength: 4, maxLength: 12 }),
-        fc.string({ minLength: 4, maxLength: 12 }),
+        fc
+          .tuple(
+            fc.constantFrom("a", "b", "c"),
+            fc.constantFrom("A", "B", "C"),
+            fc.constantFrom("0", "1", "2"),
+            fc.string({ minLength: 5, maxLength: 8 }),
+          )
+          .map(([a, b, c, rest]) => `${a}${b}${c}${rest}`),
+        fc
+          .tuple(
+            fc.constantFrom("a", "b", "c"),
+            fc.constantFrom("A", "B", "C"),
+            fc.constantFrom("0", "1", "2"),
+            fc.string({ minLength: 5, maxLength: 8 }),
+          )
+          .map(([a, b, c, rest]) => `${a}${b}${c}${rest}`),
         async (formId, password, wrongPassword) => {
           fc.pre(password !== wrongPassword);
           const hash = await bcrypt.hash(password, 8);

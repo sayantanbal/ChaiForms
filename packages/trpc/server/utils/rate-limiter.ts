@@ -11,6 +11,7 @@ let authRatelimit: Ratelimit | null = null;
 let mutationRatelimit: Ratelimit | null = null;
 let queryRatelimit: Ratelimit | null = null;
 let submitRatelimit: Ratelimit | null = null;
+let unlockRatelimit: Ratelimit | null = null;
 
 function hasUpstashConfig(): boolean {
   return Boolean(
@@ -72,6 +73,17 @@ export function getSubmitRatelimit(): Ratelimit {
   return submitRatelimit;
 }
 
+export function getUnlockRatelimit(): Ratelimit {
+  if (!unlockRatelimit) {
+    unlockRatelimit = new Ratelimit({
+      redis: getRedis(),
+      limiter: Ratelimit.slidingWindow(5, "60 m"),
+      prefix: "chaiforms:unlock",
+    });
+  }
+  return unlockRatelimit;
+}
+
 function assertInMemoryRateLimit(
   bucketKey: string,
   identifier: string,
@@ -107,6 +119,9 @@ function assertInMemoryRateLimit(
 export async function assertRateLimit(
   limiter: Ratelimit,
   identifier: string,
+  opts?: {
+    formatMessage?: (reset: number) => string;
+  },
 ): Promise<void> {
   const { success, reset } = await limiter.limit(identifier);
 
@@ -117,7 +132,9 @@ export async function assertRateLimit(
     );
     throw new TRPCError({
       code: "TOO_MANY_REQUESTS",
-      message: `Rate limit exceeded. Retry after ${retryAfterSeconds} seconds.`,
+      message:
+        opts?.formatMessage?.(reset) ??
+        `Rate limit exceeded. Retry after ${retryAfterSeconds} seconds.`,
     });
   }
 }

@@ -24,16 +24,31 @@ function getCsrfSecret(): string {
   return secret;
 }
 
+const CSRF_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function signCsrfPayload(payload: string): string {
+  return createHmac("sha256", getCsrfSecret()).update(payload).digest("hex");
+}
+
 export function createCsrfToken(): string {
-  const raw = randomBytes(24).toString("hex");
-  const signature = createHmac("sha256", getCsrfSecret()).update(raw).digest("hex");
-  return `${raw}.${signature}`;
+  const nonce = randomBytes(24).toString("hex");
+  const expiresAt = String(Date.now() + CSRF_TTL_MS);
+  const payload = `${nonce}.${expiresAt}`;
+  const signature = signCsrfPayload(payload);
+  return `${payload}.${signature}`;
 }
 
 function isValidCsrfToken(token: string): boolean {
-  const [raw, signature] = token.split(".");
-  if (!raw || !signature) return false;
-  const expected = createHmac("sha256", getCsrfSecret()).update(raw).digest("hex");
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+  const [nonce, expiresAtStr, signature] = parts;
+  if (!nonce || !expiresAtStr || !signature) return false;
+
+  const expiresAt = Number(expiresAtStr);
+  if (!Number.isFinite(expiresAt) || Date.now() > expiresAt) return false;
+
+  const payload = `${nonce}.${expiresAtStr}`;
+  const expected = signCsrfPayload(payload);
   try {
     return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
   } catch {
@@ -138,6 +153,6 @@ export function csrfCookieOptions(isProd: boolean) {
     sameSite: isProd ? ("none" as const) : ("lax" as const),
     secure: isProd,
     path: "/",
-    maxAge: 60 * 60 * 24, // 1 day
+    maxAge: 60 * 60, // 1 hour (matches token TTL)
   };
 }

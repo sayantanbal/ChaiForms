@@ -31,7 +31,10 @@ import { nanoid } from "nanoid";
 import { publicProcedure, protectedProcedure, router } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
 import { zodUndefinedModel } from "../../schema";
+import { getClientIp } from "../../utils/client-context";
 import { signUnlockToken } from "../../utils/jwt";
+import { sanitizeText } from "../../utils/sanitize";
+import { assertUnlockRateLimit } from "../../utils/unlock-rate-limit";
 
 const TAGS_FORMS = ["Forms"];
 const TAGS_FIELDS = ["Forms", "Fields"];
@@ -192,7 +195,7 @@ export const formsRouter = router({
       const [form] = await db
         .insert(formsTable)
         .values({
-          title: input.title,
+          title: sanitizeText(input.title),
           creatorId: ctx.user.id,
           slug,
           status: "draft",
@@ -342,9 +345,12 @@ export const formsRouter = router({
       }
 
       const updateData: Partial<typeof formsTable.$inferInsert> = {};
-      if (settings.title !== undefined) updateData.title = settings.title;
+      if (settings.title !== undefined)
+        updateData.title = sanitizeText(settings.title);
       if (settings.description !== undefined)
-        updateData.description = settings.description;
+        updateData.description = settings.description
+          ? sanitizeText(settings.description)
+          : settings.description;
       if (settings.slug !== undefined) updateData.slug = settings.slug;
       if (settings.visibility !== undefined)
         updateData.visibility = settings.visibility;
@@ -851,7 +857,10 @@ export const formsRouter = router({
     })
     .input(z.object({ slug: z.string(), password: z.string() }))
     .output(z.object({ unlockToken: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const ip = getClientIp(ctx.req) ?? "unknown";
+      await assertUnlockRateLimit(`${ip}:${input.slug}`);
+
       const [form] = await db
         .select()
         .from(formsTable)
