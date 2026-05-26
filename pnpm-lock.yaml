@@ -650,6 +650,12 @@ importers:
       "@trpc/server":
         specifier: ^11.8.1
         version: 11.17.0(typescript@5.9.3)
+      "@types/jsonwebtoken":
+        specifier: ^9.0.9
+        version: 9.0.10
+      "@types/ua-parser-js":
+        specifier: ^0.7.39
+        version: 0.7.39
       "@upstash/ratelimit":
         specifier: ^2.0.8
         version: 2.0.8(@upstash/redis@1.38.0)
@@ -690,12 +696,6 @@ importers:
       "@types/bcryptjs":
         specifier: ^3.0.0
         version: 3.0.0
-      "@types/jsonwebtoken":
-        specifier: ^9.0.9
-        version: 9.0.10
-      "@types/ua-parser-js":
-        specifier: ^0.7.39
-        version: 0.7.39
       dotenv-cli:
         specifier: ^11.0.0
         version: 11.0.0
