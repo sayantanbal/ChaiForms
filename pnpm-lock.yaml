@@ -50,24 +50,51 @@ importers:
       "@repo/database":
         specifier: workspace:*
         version: link:../../packages/database
+      "@repo/eslint-config":
+        specifier: workspace:*
+        version: link:../../packages/eslint-config
       "@repo/logger":
         specifier: workspace:*
         version: link:../../packages/logger
       "@repo/schemas":
         specifier: workspace:*
         version: link:../../packages/schemas
+      "@repo/services":
+        specifier: workspace:*
+        version: link:../../packages/services
       "@repo/trpc":
         specifier: workspace:*
         version: link:../../packages/trpc
       "@repo/types":
         specifier: workspace:*
         version: link:../../packages/types
+      "@repo/typescript-config":
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
       "@scalar/express-api-reference":
         specifier: ^0.8.30
         version: 0.8.48
+      "@swc/core":
+        specifier: ^1.15.8
+        version: 1.15.40(@swc/helpers@0.5.21)
       "@trpc/server":
         specifier: ^11.8.1
         version: 11.17.0(typescript@5.9.3)
+      "@types/cookie-parser":
+        specifier: ^1.4.9
+        version: 1.4.10(@types/express@5.0.6)
+      "@types/cors":
+        specifier: ^2.8.19
+        version: 2.8.19
+      "@types/express":
+        specifier: ^5.0.6
+        version: 5.0.6
+      "@types/node":
+        specifier: ^22.15.3
+        version: 22.19.19
+      "@types/ws":
+        specifier: ^8.18.1
+        version: 8.18.1
       "@upstash/ratelimit":
         specifier: ^2.0.8
         version: 2.0.8(@upstash/redis@1.38.0)
@@ -116,6 +143,12 @@ importers:
       trpc-to-openapi:
         specifier: ^3.1.0
         version: 3.3.0(@trpc/server@11.17.0(typescript@5.9.3))(zod-openapi@5.4.6(zod@4.4.3))(zod@4.4.3)
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(@swc/core@1.15.40(@swc/helpers@0.5.21))(jiti@2.7.0)(postcss@8.5.15)(tsx@4.22.3)(typescript@5.9.3)(yaml@2.9.0)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
       ua-parser-js:
         specifier: ^2.0.3
         version: 2.0.10
@@ -126,36 +159,9 @@ importers:
         specifier: ^4.3.5
         version: 4.4.3
     devDependencies:
-      "@repo/eslint-config":
-        specifier: workspace:*
-        version: link:../../packages/eslint-config
-      "@repo/services":
-        specifier: workspace:*
-        version: link:../../packages/services
-      "@repo/typescript-config":
-        specifier: workspace:*
-        version: link:../../packages/typescript-config
-      "@swc/core":
-        specifier: ^1.15.8
-        version: 1.15.40(@swc/helpers@0.5.21)
-      "@types/cookie-parser":
-        specifier: ^1.4.9
-        version: 1.4.10(@types/express@5.0.6)
-      "@types/cors":
-        specifier: ^2.8.19
-        version: 2.8.19
-      "@types/express":
-        specifier: ^5.0.6
-        version: 5.0.6
-      "@types/node":
-        specifier: ^22.15.3
-        version: 22.19.19
       "@types/supertest":
         specifier: ^7.2.0
         version: 7.2.0
-      "@types/ws":
-        specifier: ^8.18.1
-        version: 8.18.1
       dotenv-cli:
         specifier: ^11.0.0
         version: 11.0.0
@@ -165,15 +171,9 @@ importers:
       supertest:
         specifier: ^7.2.2
         version: 7.2.2
-      tsup:
-        specifier: ^8.5.1
-        version: 8.5.1(@swc/core@1.15.40(@swc/helpers@0.5.21))(jiti@2.7.0)(postcss@8.5.15)(tsx@4.22.3)(typescript@5.9.3)(yaml@2.9.0)
       tsx:
         specifier: ^4.21.0
         version: 4.22.3
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.19)(happy-dom@20.9.0)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(tsx@4.22.3)(yaml@2.9.0)
