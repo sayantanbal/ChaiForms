@@ -12,16 +12,22 @@ ChaiForms is a Typeform-style form builder SaaS built on a Turborepo monorepo. C
 - **📱 QR Code Sharing:** Generate and download QR codes for any form from the dashboard action menu.
 - **🌐 Public Explore Gallery:** Discover public forms and start from community templates.
 
+## Production Endpoints (Hackathon Submission)
+
+- **Frontend Web App:** https://chaiforms.sayantanbal.in
+- **Backend API:** https://api-1001546091343.asia-south1.run.app
+- **Scalar API Docs:** https://api-1001546091343.asia-south1.run.app/docs
+
 ## Monorepo structure
 
-| Path | Purpose |
-| --- | --- |
-| `apps/web` | Next.js 16 frontend with Tailwind CSS & tRPC Client |
-| `apps/api` | Express + tRPC API server with Scalar OpenAPI docs |
-| `packages/schemas` | Shared Zod schemas (`FieldSchemaUnion`, form settings, responses, analytics) |
-| `packages/trpc` | tRPC routers (auth, forms, analytics, explore, admin, responses) |
-| `packages/database` | Drizzle ORM schema, migrations, and seed script |
-| `packages/services` | `NotificationService` (Resend email) |
+| Path                | Purpose                                                                      |
+| ------------------- | ---------------------------------------------------------------------------- |
+| `apps/web`          | Next.js 16 frontend with Tailwind CSS & tRPC Client                          |
+| `apps/api`          | Express + tRPC API server with Scalar OpenAPI docs                           |
+| `packages/schemas`  | Shared Zod schemas (`FieldSchemaUnion`, form settings, responses, analytics) |
+| `packages/trpc`     | tRPC routers (auth, forms, analytics, explore, admin, responses)             |
+| `packages/database` | Drizzle ORM schema, migrations, and seed script                              |
+| `packages/services` | `NotificationService` (Resend email)                                         |
 
 ## Local Development Setup
 
@@ -50,29 +56,29 @@ pnpm dev
 
 ### Required Environment Variables
 
-| Variable | Description |
-| --- | --- |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `JWT_SECRET` | HS256 signing secret (min 32 chars) |
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
-| `GOOGLE_REDIRECT_URI` | OAuth callback (e.g. `http://localhost:3000/auth/callback`) |
-| `WEB_ORIGIN` | CORS origin for the web app (e.g. `http://localhost:3000`) |
-| `BASE_URL` | API base URL (e.g. `http://localhost:3001`) |
-| `NEXT_PUBLIC_API_URL` | API URL visible in browser |
-| `NEXT_PUBLIC_WEB_BASE_URL` | Web base URL for form share links |
-| `RESEND_API_KEY` | Resend key for email notifications (optional) |
-| `ENABLE_DEMO_LOGIN` | `true` to enable demo bypass buttons on `/login` |
-| `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | Same flag exposed to browser |
+| Variable                        | Description                                                 |
+| ------------------------------- | ----------------------------------------------------------- |
+| `DATABASE_URL`                  | PostgreSQL connection string                                |
+| `JWT_SECRET`                    | HS256 signing secret (min 32 chars)                         |
+| `GOOGLE_CLIENT_ID`              | Google OAuth client ID                                      |
+| `GOOGLE_CLIENT_SECRET`          | Google OAuth client secret                                  |
+| `GOOGLE_REDIRECT_URI`           | OAuth callback (e.g. `http://localhost:3000/auth/callback`) |
+| `WEB_ORIGIN`                    | CORS origin for the web app (e.g. `http://localhost:3000`)  |
+| `BASE_URL`                      | API base URL (e.g. `http://localhost:3001`)                 |
+| `NEXT_PUBLIC_API_URL`           | API URL visible in browser                                  |
+| `NEXT_PUBLIC_WEB_BASE_URL`      | Web base URL for form share links                           |
+| `RESEND_API_KEY`                | Resend key for email notifications (optional)               |
+| `ENABLE_DEMO_LOGIN`             | `true` to enable demo bypass buttons on `/login`            |
+| `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | Same flag exposed to browser                                |
 
 ## Demo Credentials
 
 After running `pnpm db:seed`:
 
-| Account | Email | Role |
-| --- | --- | --- |
-| Demo Creator | `demo@chaiforms.dev` | creator |
-| Admin | `admin@chaiforms.dev` | admin |
+| Account      | Email                 | Role    |
+| ------------ | --------------------- | ------- |
+| Demo Creator | `demo@chaiforms.dev`  | creator |
+| Admin        | `admin@chaiforms.dev` | admin   |
 
 **Password-protected form slug:** `startup-idea-validator`  
 **Demo form password:** `demo1234`
@@ -83,46 +89,46 @@ Set `ENABLE_DEMO_LOGIN=true` and `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true` in your en
 
 ## Implementation Status
 
-| Phase | Priority | Status | Description |
-| --- | --- | --- | --- |
-| 1 — Schemas | P0 | ✅ Complete | `@repo/schemas` package with FieldSchemaUnion + tests |
-| 2 — Database | P0 | ✅ Complete | Forms, responses, answers, templates, pages + migrations |
-| 3 — Auth & JWT | P0 | ✅ Complete | Google OAuth, JWT cookies, protectedProcedure, demoLogin |
-| 4 — tRPC Routers | P0 | ✅ Complete | forms, responses, analytics, explore, admin |
-| 5 — Email | P1 | ✅ Complete | NotificationService via Resend |
-| 6 — Next.js Auth Middleware | P0 | ✅ Complete | JWT edge middleware, route guards |
-| 7 — Theme System | P1 | ✅ Complete | 8 themes with CSS variables |
-| 8 — Form Builder UI | P0/P1 | ✅ Complete | Drag-and-drop editor with DnD Kit |
-| 9 — Conditional Logic | P2 | ✅ Complete | Client-side field visibility engine |
-| 10 — Public Form Page | P0 | ✅ Complete | `/f/[slug]` renderer with multi-page + conditional logic |
-| 11 — Creator Dashboard | P0 | ✅ Complete | Analytics, responses, builder, preview |
-| 12 — QR Code Sharing | P2 | ✅ Complete | QR modal in dashboard action menu |
-| 13 — Marketing Pages | P0 | ✅ Complete | Landing, Explore, Templates, Pricing |
-| 14 — Admin Dashboard | P2 | ✅ Complete | Platform stats, user and form tables |
-| 15 — Seed Script | P0 | ✅ Complete | Idempotent seed with 3 templates, 3 forms, 75+ responses |
-| 18 — OpenAPI / Scalar | P0 | ✅ Complete | `/docs` with all tagged tRPC procedures |
-| 19 — README | P0 | ✅ Complete | This file |
+| Phase                       | Priority | Status      | Description                                              |
+| --------------------------- | -------- | ----------- | -------------------------------------------------------- |
+| 1 — Schemas                 | P0       | ✅ Complete | `@repo/schemas` package with FieldSchemaUnion + tests    |
+| 2 — Database                | P0       | ✅ Complete | Forms, responses, answers, templates, pages + migrations |
+| 3 — Auth & JWT              | P0       | ✅ Complete | Google OAuth, JWT cookies, protectedProcedure, demoLogin |
+| 4 — tRPC Routers            | P0       | ✅ Complete | forms, responses, analytics, explore, admin              |
+| 5 — Email                   | P1       | ✅ Complete | NotificationService via Resend                           |
+| 6 — Next.js Auth Middleware | P0       | ✅ Complete | JWT edge middleware, route guards                        |
+| 7 — Theme System            | P1       | ✅ Complete | 8 themes with CSS variables                              |
+| 8 — Form Builder UI         | P0/P1    | ✅ Complete | Drag-and-drop editor with DnD Kit                        |
+| 9 — Conditional Logic       | P2       | ✅ Complete | Client-side field visibility engine                      |
+| 10 — Public Form Page       | P0       | ✅ Complete | `/f/[slug]` renderer with multi-page + conditional logic |
+| 11 — Creator Dashboard      | P0       | ✅ Complete | Analytics, responses, builder, preview                   |
+| 12 — QR Code Sharing        | P2       | ✅ Complete | QR modal in dashboard action menu                        |
+| 13 — Marketing Pages        | P0       | ✅ Complete | Landing, Explore, Templates, Pricing                     |
+| 14 — Admin Dashboard        | P2       | ✅ Complete | Platform stats, user and form tables                     |
+| 15 — Seed Script            | P0       | ✅ Complete | Idempotent seed with 3 templates, 3 forms, 75+ responses |
+| 18 — OpenAPI / Scalar       | P0       | ✅ Complete | `/docs` with all tagged tRPC procedures                  |
+| 19 — README                 | P0       | ✅ Complete | This file                                                |
 
 ## Scripts
 
-| Command | Description |
-| --- | --- |
-| `pnpm dev` | Start web + API in development |
-| `pnpm build` | Build all apps and packages |
-| `pnpm test` | Run Vitest tests across packages |
-| `pnpm db:migrate` | Apply Drizzle migrations |
-| `pnpm db:seed` | Seed database with demo data (idempotent) |
+| Command            | Description                                 |
+| ------------------ | ------------------------------------------- |
+| `pnpm dev`         | Start web + API in development              |
+| `pnpm build`       | Build all apps and packages                 |
+| `pnpm test`        | Run Vitest tests across packages            |
+| `pnpm db:migrate`  | Apply Drizzle migrations                    |
+| `pnpm db:seed`     | Seed database with demo data (idempotent)   |
 | `pnpm db:generate` | Generate new migration after schema changes |
-| `pnpm check-types` | TypeScript check across monorepo |
+| `pnpm check-types` | TypeScript check across monorepo            |
 
 ## Submission Artifacts
 
-| Artifact | URL |
-| --- | --- |
-| GitHub Repository | _Add your repo URL here_ |
-| Deployed Web App | _Add your Vercel URL here_ |
-| Deployed API | _Add your API base URL here_ |
-| Scalar API Docs | `{API_BASE_URL}/docs` |
+| Artifact          | URL                                                |
+| ----------------- | -------------------------------------------------- |
+| GitHub Repository | _Add your repo URL here_                           |
+| Deployed Web App  | https://chaiforms.sayantanbal.in                   |
+| Deployed API      | https://api-1001546091343.asia-south1.run.app      |
+| Scalar API Docs   | https://api-1001546091343.asia-south1.run.app/docs |
 
 ## Specs
 

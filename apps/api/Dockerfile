@@ -20,6 +20,7 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=deps /app/packages ./packages
 COPY . .
 RUN pnpm turbo build --filter=@repo/api
 
@@ -33,6 +34,7 @@ USER api
 
 COPY --from=builder --chown=api:nodejs /app/apps/api/dist ./apps/api/dist
 COPY --from=builder --chown=api:nodejs /app/apps/api/package.json ./apps/api/package.json
+COPY --from=builder --chown=api:nodejs /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder --chown=api:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=api:nodejs /app/packages ./packages
 COPY --from=builder --chown=api:nodejs /app/package.json ./package.json

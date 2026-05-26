@@ -1,0 +1,13 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "asia-south1-docker.pkg.dev/chaiform/chaiforms/api:latest",
+        "-f",
+        "apps/api/Dockerfile",
+        ".",
+      ]
+images:
+  - "asia-south1-docker.pkg.dev/chaiform/chaiforms/api:latest"

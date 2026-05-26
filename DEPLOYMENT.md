@@ -22,6 +22,14 @@ Ensure these environment variables are set before deployment:
 
 ---
 
+## Production Endpoints (Hackathon Submission)
+
+- **Frontend Web App:** https://chaiforms.sayantanbal.in
+- **Backend API:** https://api-1001546091343.asia-south1.run.app
+- **Scalar API Docs:** https://api-1001546091343.asia-south1.run.app/docs
+
+---
+
 ## Production: Vercel + Cloud Run
 
 See [docs/VERCEL_CLOUD_RUN.md](docs/VERCEL_CLOUD_RUN.md) for GitHub secrets, Cloud Run env vars, and Vercel project setup.
