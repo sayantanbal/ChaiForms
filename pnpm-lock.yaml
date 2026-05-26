@@ -812,6 +812,12 @@ importers:
       "@radix-ui/react-tooltip":
         specifier: ^1.0.7
         version: 1.2.8(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      "@types/react":
+        specifier: 19.2.2
+        version: 19.2.2
+      "@types/react-dom":
+        specifier: 19.2.2
+        version: 19.2.2(@types/react@19.2.2)
       class-variance-authority:
         specifier: ^0.7.0
         version: 0.7.1
@@ -867,12 +873,6 @@ importers:
       "@repo/typescript-config":
         specifier: workspace:*
         version: link:../typescript-config
-      "@types/react":
-        specifier: 19.2.2
-        version: 19.2.2
-      "@types/react-dom":
-        specifier: 19.2.2
-        version: 19.2.2(@types/react@19.2.2)
       eslint:
         specifier: ^9.6.0
         version: 9.39.4(jiti@1.21.7)
