@@ -129,7 +129,28 @@ Notes:
 
 ---
 
-## Packages Breakdown
+## Demo Credentials (Hackathon Judges 🏆)
+
+> **No sign-up or OAuth required.** Visit the login page and click a demo button for instant access.
+
+**Login page:** https://chaiforms.sayantanbal.in/login
+
+| Account      | Email                 | Role    |
+| ------------ | --------------------- | ------- |
+| Demo Creator | `demo@chaiforms.dev`  | creator |
+| Admin        | `admin@chaiforms.dev` | admin   |
+
+### What to explore
+
+| Feature                                       | Where to find it                                   |
+| --------------------------------------------- | -------------------------------------------------- |
+| Form builder (drag & drop, conditional logic) | Dashboard → New Form                               |
+| Response table & CSV export                   | Dashboard → any form → Responses                   |
+| Analytics charts                              | Dashboard → any form → Analytics                   |
+| Multi-page form with theming                  | `/f/which-anime-character-are-you`                 |
+| Password-protected form                       | `/f/startup-idea-validator` (password: `Demo1234`) |
+| Admin panel (user & form moderation)          | `/admin` (use Admin account)                       |
+| API documentation (Scalar UI)                 | https://api-1001546091343.asia-south1.run.app/docs |
 
 ### `@repo/schemas`
 

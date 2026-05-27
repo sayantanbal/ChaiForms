@@ -87,21 +87,32 @@ pnpm dev
 | `ENABLE_DEMO_LOGIN`             | No         | `true` to enable demo login API.                                                    |
 | `RESEND_API_KEY`                | No         | Resend key for submission + invite emails.                                          |
 
-## Demo Credentials
+## Demo Credentials (For Hackathon Judges 🏆)
 
-After running `pnpm db:seed`:
+> **No sign-up required.** Click one of the demo buttons on the login page to instantly access a pre-seeded account.
 
-| Account      | Email                 | Role    |
-| ------------ | --------------------- | ------- |
-| Demo Creator | `demo@chaiforms.dev`  | creator |
-| Admin        | `admin@chaiforms.dev` | admin   |
+**Login page:** https://chaiforms.sayantanbal.in/login
 
-**Password-protected form slug:** `startup-idea-validator`  
-**Demo form password:** `demo1234`
+| Account          | Email                 | Access                                                     |
+| ---------------- | --------------------- | ---------------------------------------------------------- |
+| **Demo Creator** | `demo@chaiforms.dev`  | Full dashboard — forms, analytics, responses, form builder |
+| **Admin**        | `admin@chaiforms.dev` | Everything above + `/admin` platform panel                 |
 
-### Demo Bypass (for Judges)
+Click **"Continue as Demo Creator"** or **"Continue as Admin"** on the login page — no password, no OAuth required.
 
-Set `ENABLE_DEMO_LOGIN=true` and `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true` in your environment, then visit `/login`. Two buttons will appear — **"Continue as Demo Creator"** and **"Continue as Admin"** — which sign in instantly without Google OAuth.
+### Pre-seeded Content
+
+- **3 published forms** with 25 responses each (100 total responses)
+- **6 templates** in the template gallery
+- **Analytics charts** populated with realistic data
+- **Password-protected form:** `/f/startup-idea-validator` → password: `Demo1234`
+
+### API Key for Testing
+
+| Field    | Value                                                |
+| -------- | ---------------------------------------------------- |
+| API Docs | https://api-1001546091343.asia-south1.run.app/docs   |
+| Health   | https://api-1001546091343.asia-south1.run.app/health |
 
 ## Implementation Status
 
