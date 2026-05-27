@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { trpc } from "~/trpc/client";
 import { toast } from "sonner";
 import Link from "next/link";
+import { redirectToLoginOnTrpcError } from "~/lib/auth/require-session";
 
 const THEME_GRADIENTS: Record<string, string> = {
   anime: "from-pink-500 to-purple-600",
@@ -18,8 +19,14 @@ const THEME_GRADIENTS: Record<string, string> = {
 };
 
 const THEME_EMOJIS: Record<string, string> = {
-  anime: "🌸", startup: "🚀", os: "🖥️", game: "🎮",
-  movie: "🎬", tech_company: "💻", event: "🎉", default: "📝",
+  anime: "🌸",
+  startup: "🚀",
+  os: "🖥️",
+  game: "🎮",
+  movie: "🎬",
+  tech_company: "💻",
+  event: "🎉",
+  default: "📝",
 };
 
 export default function NewFormPage() {
@@ -34,14 +41,18 @@ export default function NewFormPage() {
     onError: (e) => toast.error(e.message),
   });
 
-  const { data: templates, isLoading: templatesLoading } = trpc.explore.listTemplates.useQuery(undefined);
+  const { data: templates, isLoading: templatesLoading } =
+    trpc.explore.listTemplates.useQuery(undefined);
 
   const createFromTemplateMutation = trpc.forms.createFromTemplate.useMutation({
     onSuccess: (form) => {
       toast.success("Form created from template!");
       router.push(`/dashboard/forms/${form.id}/edit`);
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => {
+      if (redirectToLoginOnTrpcError(e, router)) return;
+      toast.error(e.message);
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -54,7 +65,10 @@ export default function NewFormPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-8">
-        <Link href="/dashboard/forms" className="text-sm text-gray-500 hover:text-gray-300 transition-colors mb-4 inline-block">
+        <Link
+          href="/dashboard/forms"
+          className="text-sm text-gray-500 hover:text-gray-300 transition-colors mb-4 inline-block"
+        >
           ← Back to forms
         </Link>
         <h1 className="text-2xl font-bold">Create New Form</h1>
@@ -104,7 +118,7 @@ export default function NewFormPage() {
             {(templates ?? []).map((template) => {
               const gradient = THEME_GRADIENTS[template.theme] ?? "from-gray-500 to-slate-600";
               const emoji = THEME_EMOJIS[template.theme] ?? "📝";
-              
+
               return (
                 <div
                   key={template.id}
@@ -124,13 +138,21 @@ export default function NewFormPage() {
                       {template.description}
                     </p>
                     <div className="flex items-center justify-between mt-auto">
-                      <span className="text-xs text-gray-500">{(template.fields as unknown[]).length} fields</span>
+                      <span className="text-xs text-gray-500">
+                        {(template.fields as unknown[]).length} fields
+                      </span>
                       <div className="flex items-center gap-3">
-                        <Link href={`/templates/${template.id}`} target="_blank" className="text-sm font-semibold text-gray-300 hover:text-white transition-colors">
+                        <Link
+                          href={`/templates/${template.id}`}
+                          target="_blank"
+                          className="text-sm font-semibold text-gray-300 hover:text-white transition-colors"
+                        >
                           Preview
                         </Link>
                         <button
-                          onClick={() => createFromTemplateMutation.mutate({ templateId: template.id })}
+                          onClick={() =>
+                            createFromTemplateMutation.mutate({ templateId: template.id })
+                          }
                           disabled={createFromTemplateMutation.isPending}
                           className={`text-sm font-bold text-white px-4 py-1.5 rounded-lg bg-gradient-to-r ${gradient} hover:opacity-90 transition-opacity disabled:opacity-50`}
                         >

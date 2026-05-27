@@ -2,6 +2,10 @@
 
 ChaiForms is a Typeform-style form builder SaaS built on a Turborepo monorepo. Creators authenticate with Google OAuth, build themed forms with drag-and-drop, publish shareable links (including QR codes), and view real-time analytics. Respondents submit forms without an account.
 
+## Documentation
+
+For the full technical deep dive, see [docs/documentation.md](docs/documentation.md).
+
 ## Features
 
 - **🎨 8 Stunning Themes:** Anime, startup, tech, OS, game, movie, event — each form tells a story.
@@ -11,6 +15,7 @@ ChaiForms is a Typeform-style form builder SaaS built on a Turborepo monorepo. C
 - **📧 Email Notifications:** Creators get notified on every submission; respondents get confirmation emails.
 - **📱 QR Code Sharing:** Generate and download QR codes for any form from the dashboard action menu.
 - **🌐 Public Explore Gallery:** Discover public forms and start from community templates.
+- **Workspaces & Integrations:** Workspace roles, API keys, and webhook delivery for teams.
 
 ## Production Endpoints (Hackathon Submission)
 
@@ -20,14 +25,19 @@ ChaiForms is a Typeform-style form builder SaaS built on a Turborepo monorepo. C
 
 ## Monorepo structure
 
-| Path                | Purpose                                                                      |
-| ------------------- | ---------------------------------------------------------------------------- |
-| `apps/web`          | Next.js 16 frontend with Tailwind CSS & tRPC Client                          |
-| `apps/api`          | Express + tRPC API server with Scalar OpenAPI docs                           |
-| `packages/schemas`  | Shared Zod schemas (`FieldSchemaUnion`, form settings, responses, analytics) |
-| `packages/trpc`     | tRPC routers (auth, forms, analytics, explore, admin, responses)             |
-| `packages/database` | Drizzle ORM schema, migrations, and seed script                              |
-| `packages/services` | `NotificationService` (Resend email)                                         |
+| Path                         | Purpose                                                                              |
+| ---------------------------- | ------------------------------------------------------------------------------------ |
+| `apps/web`                   | Next.js 16 frontend with Tailwind CSS & tRPC Client                                  |
+| `apps/api`                   | Express + tRPC API server with Scalar OpenAPI docs                                   |
+| `packages/schemas`           | Shared Zod schemas (`FieldSchemaUnion`, form settings, responses, analytics)         |
+| `packages/trpc`              | tRPC routers (health, auth, forms, responses, analytics, explore, admin, workspaces) |
+| `packages/database`          | Drizzle ORM schema, migrations, repositories, and seed script                        |
+| `packages/services`          | Auth, forms, notification, webhook, and alerting services                            |
+| `packages/ui`                | Shared shadcn/ui + Radix component library                                           |
+| `packages/types`             | Shared API + webhook contracts                                                       |
+| `packages/logger`            | Pino-based logger                                                                    |
+| `packages/eslint-config`     | Shared ESLint presets                                                                |
+| `packages/typescript-config` | Shared TypeScript presets                                                            |
 
 ## Local Development Setup
 
@@ -37,8 +47,8 @@ pnpm install
 
 # 2. Copy and fill environment variables
 cp .env.example .env
-# Required: DATABASE_URL, JWT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
-# Optional: RESEND_API_KEY (email), ENABLE_DEMO_LOGIN=true (for demo bypass)
+# Required: DATABASE_URL, JWT_SECRET, CSRF_SECRET
+# Optional: NEON_AUTH_*, GOOGLE_OAUTH_*, UPSTASH_REDIS_*, RESEND_API_KEY, ENABLE_DEMO_LOGIN
 
 # 3. Apply database migrations
 pnpm db:migrate
@@ -51,25 +61,31 @@ pnpm dev
 ```
 
 - **Web App:** http://localhost:3000
-- **API Server:** http://localhost:3001
-- **Scalar API Docs:** http://localhost:3001/docs
+- **API Server:** http://localhost:8000
+- **Scalar API Docs:** http://localhost:8000/docs
 
-### Required Environment Variables
+### Environment Variables
 
-| Variable                        | Description                                                 |
-| ------------------------------- | ----------------------------------------------------------- |
-| `DATABASE_URL`                  | PostgreSQL connection string                                |
-| `JWT_SECRET`                    | HS256 signing secret (min 32 chars)                         |
-| `GOOGLE_CLIENT_ID`              | Google OAuth client ID                                      |
-| `GOOGLE_CLIENT_SECRET`          | Google OAuth client secret                                  |
-| `GOOGLE_REDIRECT_URI`           | OAuth callback (e.g. `http://localhost:3000/auth/callback`) |
-| `WEB_ORIGIN`                    | CORS origin for the web app (e.g. `http://localhost:3000`)  |
-| `BASE_URL`                      | API base URL (e.g. `http://localhost:3001`)                 |
-| `NEXT_PUBLIC_API_URL`           | API URL visible in browser                                  |
-| `NEXT_PUBLIC_WEB_BASE_URL`      | Web base URL for form share links                           |
-| `RESEND_API_KEY`                | Resend key for email notifications (optional)               |
-| `ENABLE_DEMO_LOGIN`             | `true` to enable demo bypass buttons on `/login`            |
-| `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | Same flag exposed to browser                                |
+| Variable                        | Required   | Description                                                                         |
+| ------------------------------- | ---------- | ----------------------------------------------------------------------------------- |
+| `DATABASE_URL`                  | Yes        | PostgreSQL connection string (Neon or local Postgres).                              |
+| `JWT_SECRET`                    | Yes (prod) | 32+ char secret for access + refresh JWT signing.                                   |
+| `CSRF_SECRET`                   | Yes (prod) | 32+ char secret for CSRF signing; falls back to JWT/Neon secret in dev.             |
+| `BASE_URL`                      | Yes        | API base URL used for OpenAPI + docs (default `http://localhost:8000`).             |
+| `WEB_ORIGIN`                    | Yes        | Comma-separated allowed origins for CORS + CSRF origin checks. Use `*` only in dev. |
+| `PORT`                          | No         | API port (default `8000`).                                                          |
+| `NEXT_PUBLIC_API_URL`           | Yes        | API URL visible in the browser (used for `/trpc` + `/csrf` rewrites).               |
+| `NEXT_PUBLIC_WEB_BASE_URL`      | No         | Web base URL for share links and emails.                                            |
+| `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | No         | `true` to show demo login buttons on `/login`.                                      |
+| `NEON_AUTH_BASE_URL`            | No         | Neon Auth base URL (Better Auth sessions).                                          |
+| `NEON_AUTH_COOKIE_SECRET`       | No         | 32+ char secret for Neon Auth cookies. Required when Neon Auth is enabled.          |
+| `GOOGLE_OAUTH_CLIENT_ID`        | No         | Legacy Google OAuth client ID.                                                      |
+| `GOOGLE_OAUTH_CLIENT_SECRET`    | No         | Legacy Google OAuth client secret.                                                  |
+| `GOOGLE_OAUTH_REDIRECT_URI`     | No         | OAuth callback (e.g. `http://localhost:3000/auth/callback`).                        |
+| `UPSTASH_REDIS_REST_URL`        | No         | Upstash REST URL for rate limiting (falls back to in-memory).                       |
+| `UPSTASH_REDIS_REST_TOKEN`      | No         | Upstash REST token for rate limiting.                                               |
+| `ENABLE_DEMO_LOGIN`             | No         | `true` to enable demo login API.                                                    |
+| `RESEND_API_KEY`                | No         | Resend key for submission + invite emails.                                          |
 
 ## Demo Credentials
 
@@ -111,15 +127,18 @@ Set `ENABLE_DEMO_LOGIN=true` and `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true` in your en
 
 ## Scripts
 
-| Command            | Description                                 |
-| ------------------ | ------------------------------------------- |
-| `pnpm dev`         | Start web + API in development              |
-| `pnpm build`       | Build all apps and packages                 |
-| `pnpm test`        | Run Vitest tests across packages            |
-| `pnpm db:migrate`  | Apply Drizzle migrations                    |
-| `pnpm db:seed`     | Seed database with demo data (idempotent)   |
-| `pnpm db:generate` | Generate new migration after schema changes |
-| `pnpm check-types` | TypeScript check across monorepo            |
+| Command                      | Description                                 |
+| ---------------------------- | ------------------------------------------- |
+| `pnpm dev`                   | Start web + API in development              |
+| `pnpm build`                 | Build all apps and packages                 |
+| `pnpm test`                  | Run Vitest tests across packages            |
+| `pnpm db:migrate`            | Apply Drizzle migrations                    |
+| `pnpm db:seed`               | Seed database with demo data (idempotent)   |
+| `pnpm db:generate`           | Generate new migration after schema changes |
+| `pnpm db:migrate-answers-v2` | Backfill typed answers table (v2)           |
+| `pnpm check-types`           | TypeScript check across monorepo            |
+| `pnpm lint`                  | Run ESLint across packages                  |
+| `pnpm format`                | Format TS/TSX/MD files with Prettier        |
 
 ## Submission Artifacts
 

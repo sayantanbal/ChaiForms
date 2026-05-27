@@ -1,3 +1,5 @@
+import { AuthDivider } from "~/components/auth/auth-divider";
+import { GoogleSignInButton } from "~/components/auth/google-sign-in-button";
 import { env } from "~/env.js";
 import { DemoLoginButtons } from "./demo-login-buttons";
 import { EmailSignInForm } from "./email-sign-in-form";
@@ -23,6 +25,12 @@ export default async function LoginPage() {
               Neon Auth is not configured yet. Set NEON_AUTH_BASE_URL and NEON_AUTH_COOKIE_SECRET to
               enable login.
             </p>
+          ) : null}
+          {neonAuthEnabled ? (
+            <>
+              <GoogleSignInButton />
+              <AuthDivider label="or continue with email" />
+            </>
           ) : null}
           <EmailSignInForm disabled={!neonAuthEnabled} />
         </div>
