@@ -5,9 +5,9 @@ const DEV_AUTH_COOKIE_SECRET = "chaiforms-dev-auth-cookie-secret-chaiforms-dev-a
 
 function getAuthBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_WEB_BASE_URL) {
-    return process.env.NEXT_PUBLIC_WEB_BASE_URL;
+    return `${process.env.NEXT_PUBLIC_WEB_BASE_URL}/api/auth`;
   }
-  return DEV_AUTH_BASE_URL;
+  return `${DEV_AUTH_BASE_URL}/api/auth`;
 }
 
 function getAuthCookieSecret(): string {
