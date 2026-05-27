@@ -144,7 +144,7 @@ Set `ENABLE_DEMO_LOGIN=true` and `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true` in your en
 
 | Artifact          | URL                                                |
 | ----------------- | -------------------------------------------------- |
-| GitHub Repository | _Add your repo URL here_                           |
+| GitHub Repository | https://github.com/sayantanbal/ChaiForms           |
 | Deployed Web App  | https://chaiforms.sayantanbal.in                   |
 | Deployed API      | https://api-1001546091343.asia-south1.run.app      |
 | Scalar API Docs   | https://api-1001546091343.asia-south1.run.app/docs |
