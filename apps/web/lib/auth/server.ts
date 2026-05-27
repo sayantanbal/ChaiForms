@@ -4,10 +4,7 @@ const DEV_AUTH_BASE_URL = "http://localhost:3000";
 const DEV_AUTH_COOKIE_SECRET = "chaiforms-dev-auth-cookie-secret-chaiforms-dev-auth-cookie-secret";
 
 function getAuthBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_WEB_BASE_URL) {
-    return `${process.env.NEXT_PUBLIC_WEB_BASE_URL}/api/auth`;
-  }
-  return `${DEV_AUTH_BASE_URL}/api/auth`;
+  return process.env.NEON_AUTH_BASE_URL ?? DEV_AUTH_BASE_URL;
 }
 
 function getAuthCookieSecret(): string {

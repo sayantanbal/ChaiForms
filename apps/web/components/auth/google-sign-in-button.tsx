@@ -27,9 +27,7 @@ export function GoogleSignInButton({
     try {
       const { error: signInError } = await authClient.signIn.social({
         provider: "google",
-        callbackURL: callbackURL.startsWith("http")
-          ? callbackURL
-          : `${window.location.origin}${callbackURL}`,
+        callbackURL,
       });
 
       if (signInError) {
